@@ -47,7 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $file_name = '';
 
     if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-        $file_name = basename($_FILES['attachment']['name']);
+        $upload_dir = 'uploads/';
+        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+        $file_name = $upload_dir . basename($_FILES['attachment']['name']);
+        move_uploaded_file($_FILES['attachment']['tmp_name'], $file_name);
     }
     
     if (!empty($title) && !empty($desc)) {
@@ -204,8 +207,8 @@ $db = get_db();
                                                 $is_pdf = (strtolower($ext) === 'pdf');
                                             ?>
                                             <i class="fa-solid <?php echo $is_pdf?'fa-file-pdf':'fa-file-word'; ?>" style="font-size:1.15rem; color:<?php echo $is_pdf?'#ef4444':'#0284c7'; ?>"></i>
-                                            <a href="<?= htmlspecialchars($leave['file']) ?>" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);" download>
-                                                <?php echo htmlspecialchars($leave['file']); ?>
+                                            <a href="<?= htmlspecialchars($leave['file']) ?>" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);" target="_blank">
+                                                <?php echo basename(htmlspecialchars($leave['file'])); ?>
                                             </a>
                                         </div>
                                     </td>

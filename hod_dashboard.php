@@ -58,7 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $file_name = '';
 
         if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-            $file_name = basename($_FILES['attachment']['name']);
+            $upload_dir = 'uploads/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            $file_name = $upload_dir . basename($_FILES['attachment']['name']);
+            move_uploaded_file($_FILES['attachment']['tmp_name'], $file_name);
         }
         
         if (!empty($title) && !empty($desc)) {
@@ -577,9 +580,9 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                 <td>
                                     <?php if ($n['attachment']): ?>
                                         <?php $ext = pathinfo($n['attachment'], PATHINFO_EXTENSION); ?>
-                                        <div class="attachment-badge <?= $ext ?>">
-                                            <i class="fa-solid fa-file-<?= $ext ?>"></i> <?= htmlspecialchars($n['attachment']) ?>
-                                        </div>
+                                        <a href="<?= htmlspecialchars($n['attachment']) ?>" class="attachment-badge <?= $ext ?>" target="_blank" style="text-decoration:none;">
+                                            <i class="fa-solid fa-file-<?= $ext ?>"></i> <?= basename(htmlspecialchars($n['attachment'])) ?>
+                                        </a>
                                     <?php else: ?>
                                         <span class="notice-desc">No File</span>
                                     <?php endif; ?>

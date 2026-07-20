@@ -24,7 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Handle uploaded file if present
         if (isset($_FILES['leave_file']) && $_FILES['leave_file']['error'] === UPLOAD_ERR_OK) {
-            $file_name = basename($_FILES['leave_file']['name']);
+            $upload_dir = 'uploads/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            $file_name = $upload_dir . basename($_FILES['leave_file']['name']);
+            move_uploaded_file($_FILES['leave_file']['tmp_name'], $file_name);
         } elseif (isset($_POST['file_name']) && !empty($_POST['file_name'])) {
             $file_name = trim($_POST['file_name']);
         }
@@ -50,7 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $file_name = 'Assignment_Unit_' . $unit . '.pdf';
 
         if (isset($_FILES['assignment_file']) && $_FILES['assignment_file']['error'] === UPLOAD_ERR_OK) {
-            $file_name = basename($_FILES['assignment_file']['name']);
+            $upload_dir = 'uploads/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            $file_name = $upload_dir . basename($_FILES['assignment_file']['name']);
+            move_uploaded_file($_FILES['assignment_file']['tmp_name'], $file_name);
         } elseif (isset($_POST['file_name']) && !empty($_POST['file_name'])) {
             $file_name = trim($_POST['file_name']);
         }
@@ -239,11 +245,11 @@ $db = get_db();
                                                 $ext = pathinfo($notice['attachment'], PATHINFO_EXTENSION); 
                                                 $badge_class = ($ext === 'pdf') ? 'pdf' : 'docx';
                                             ?>
-                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" class="attachment-badge <?php echo $badge_class; ?>" download>
+                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" class="attachment-badge <?php echo $badge_class; ?>" target="_blank">
                                                 <i class="fa-regular <?php echo ($badge_class==='pdf')?'fa-file-pdf':'fa-file-word'; ?>"></i>
-                                                <span><?php echo htmlspecialchars($notice['attachment']); ?> (<?php echo $notice['size']; ?>)</span>
+                                                <span><?php echo basename(htmlspecialchars($notice['attachment'])); ?> (<?php echo $notice['size']; ?>)</span>
                                             </a>
-                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;" download>
+                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;" target="_blank">
                                                 <i class="fa-solid fa-download"></i>
                                             </a>
                                         <?php else: ?>
