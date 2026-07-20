@@ -124,6 +124,7 @@ $db = get_db();
     <title>College ERP Portal - Student Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="assets/js/sweetalert2.all.min.js"></script>
 </head>
 <body class="theme-student">
     <div class="dashboard-wrapper">
@@ -159,7 +160,7 @@ $db = get_db();
                     <p id="currentTabSubtitle">Stay updated with the latest announcements and important information.</p>
                 </div>
                 <div class="user-profile-widget">
-                    <div class="notification-bell">
+                    <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#3b82f6'});">
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">
@@ -245,11 +246,11 @@ $db = get_db();
                                                 $ext = pathinfo($notice['attachment'], PATHINFO_EXTENSION); 
                                                 $badge_class = ($ext === 'pdf') ? 'pdf' : 'docx';
                                             ?>
-                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" class="attachment-badge <?php echo $badge_class; ?>" target="_blank">
+                                            <a href="#" onclick="showBuildAlert(event)" class="attachment-badge <?php echo $badge_class; ?>">
                                                 <i class="fa-regular <?php echo ($badge_class==='pdf')?'fa-file-pdf':'fa-file-word'; ?>"></i>
                                                 <span><?php echo basename(htmlspecialchars($notice['attachment'])); ?> (<?php echo $notice['size']; ?>)</span>
                                             </a>
-                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;" target="_blank">
+                                            <a href="#" onclick="showBuildAlert(event)" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;">
                                                 <i class="fa-solid fa-download"></i>
                                             </a>
                                         <?php else: ?>
@@ -818,6 +819,26 @@ $db = get_db();
             });
 
             sortedRows.forEach(row => tbody.appendChild(row));
+        }
+        function showBuildAlert(e) {
+            e.preventDefault();
+            console.log("showBuildAlert triggered");
+            try {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Build in Progress',
+                        text: 'This feature is currently under development.',
+                        icon: 'info',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    console.warn("Swal is undefined, falling back to native alert");
+                    alert('Build in Progress');
+                }
+            } catch (err) {
+                console.error("SweetAlert error:", err);
+                alert('Build in Progress');
+            }
         }
     </script>
 </body>

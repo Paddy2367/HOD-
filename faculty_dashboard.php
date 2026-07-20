@@ -100,6 +100,7 @@ $db = get_db();
     <title>College ERP Portal - Faculty Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="theme-faculty">
     <div class="dashboard-wrapper">
@@ -133,7 +134,7 @@ $db = get_db();
                     <p id="currentTabSubtitle">Review, approve or reject student leave requests submitted for review.</p>
                 </div>
                 <div class="user-profile-widget">
-                    <div class="notification-bell">
+                    <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#10b981'});">
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">

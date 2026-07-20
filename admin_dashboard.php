@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <title>College ERP Portal - Admin Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="theme-admin">
     <div class="dashboard-wrapper">
@@ -67,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <p id="currentTabSubtitle">Admin portal for user credentials, roles, and security access profiles.</p>
                 </div>
                 <div class="user-profile-widget">
-                    <div class="notification-bell" onclick="alert('You have no new notifications.')">
+                    <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#f97316'});">
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">

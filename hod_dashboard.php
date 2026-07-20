@@ -201,6 +201,7 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
     <title>HOD Dashboard - Student Welfare Portal</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="theme-hod">
     <div class="dashboard-wrapper">
@@ -240,7 +241,7 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                     <p id="currentTabSubtitle">Welcome back, <?= htmlspecialchars($user['name']) ?></p>
                 </div>
                 <div class="user-profile-widget">
-                    <div class="notification-bell">
+                    <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'});">
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">
