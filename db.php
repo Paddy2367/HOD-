@@ -21,50 +21,6 @@ function init_db() {
                     'attachment' => 'schedule.pdf',
                     'size' => '245 KB',
                     'expiry' => '2026-08-01'
-                ],
-                [
-                    'id' => 2,
-                    'title' => 'Project Submission',
-                    'desc' => 'Final year project reports to be submitted by 5th August 2026.',
-                    'author' => 'Prof. Neha Patil',
-                    'role' => 'Faculty',
-                    'date' => '14 Jul 2026 02:15 PM',
-                    'attachment' => 'guidelines.docx',
-                    'size' => '512 KB',
-                    'expiry' => '2026-08-05'
-                ],
-                [
-                    'id' => 3,
-                    'title' => 'Holiday Notice',
-                    'desc' => 'College will remain closed on 18th July 2026 on account of Muharram.',
-                    'author' => 'Admin Office',
-                    'role' => 'Administration',
-                    'date' => '12 Jul 2026 09:00 AM',
-                    'attachment' => '',
-                    'size' => '',
-                    'expiry' => '2026-07-20'
-                ],
-                [
-                    'id' => 4,
-                    'title' => 'Lab Maintenance',
-                    'desc' => 'Computer Lab 2 will be under maintenance on 16th July 2026.',
-                    'author' => 'Prof. Amit Deshmukh',
-                    'role' => 'Faculty',
-                    'date' => '10 Jul 2026 04:45 PM',
-                    'attachment' => '',
-                    'size' => '',
-                    'expiry' => '2026-07-18'
-                ],
-                [
-                    'id' => 5,
-                    'title' => 'Seminar on AI',
-                    'desc' => 'Seminar on "Introduction to Artificial Intelligence" on 25th July 2026.',
-                    'author' => 'Prof. Priya Kulkarni',
-                    'role' => 'Faculty',
-                    'date' => '08 Jul 2026 11:20 AM',
-                    'attachment' => 'seminar.pdf',
-                    'size' => '380 KB',
-                    'expiry' => '2026-07-26'
                 ]
             ],
             'assignments' => [
@@ -133,6 +89,26 @@ function init_db() {
                     'file' => '',
                     'marks' => 'Pending',
                     'created_by' => 'Prof. Neha Patil'
+                ]
+            ],
+            'assignment_submissions' => [
+                [
+                    'id' => 1,
+                    'assignment_unit' => 1,
+                    'student_id' => '125UIT1080',
+                    'student_name' => 'Prasad Kulkarni',
+                    'file' => 'assignment_1_prasad.pdf',
+                    'status' => 'graded',
+                    'marks' => '7 / 10'
+                ],
+                [
+                    'id' => 2,
+                    'assignment_unit' => 2,
+                    'student_id' => '125UIT1080',
+                    'student_name' => 'Prasad Kulkarni',
+                    'file' => 'assignment_2_final.pdf',
+                    'status' => 'graded',
+                    'marks' => '10 / 10'
                 ]
             ],
             'leaves' => [

@@ -9,6 +9,7 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'student') {
 }
 
 $user = $_SESSION['user'];
+$student_id = $user['id'];
 $db = get_db();
 
 $success_message = '';
@@ -24,25 +25,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Handle uploaded file if present
         if (isset($_FILES['leave_file']) && $_FILES['leave_file']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = 'uploads/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $file_name = $upload_dir . basename($_FILES['leave_file']['name']);
-            move_uploaded_file($_FILES['leave_file']['tmp_name'], $file_name);
+            $file_name = basename($_FILES['leave_file']['name']);
         } elseif (isset($_POST['file_name']) && !empty($_POST['file_name'])) {
             $file_name = trim($_POST['file_name']);
         }
 
         if (!empty($reason) && !empty($from_date) && !empty($to_date)) {
             // Read, append, and save
-            $new_leave = [
+            $db['leaves'][] = [
                 'id' => count($db['leaves']) + 1,
+                'applicant_name' => $user['name'],
+                'applicant_role' => 'Student',
                 'file' => $file_name,
                 'reason' => $reason,
-                'from' => date('d M Y', strtotime($from_date)),
-                'to' => date('d M Y', strtotime($to_date)),
-                'status' => 'Pending'
+                'from' => $from_date,
+                'to' => $to_date,
+                'status' => 'Pending',
+                'remarks' => ''
             ];
-            $db['leaves'][] = $new_leave;
+            $db['recent_activity'] = array_merge([
+                [
+                    'title' => 'New Leave Application',
+                    'desc' => $user['name'] . ' applied for ' . $reason . ' Leave',
+                    'time' => 'Just now'
+                ]
+            ], array_slice($db['recent_activity'], 0, 3));
             save_db($db);
             $success_message = 'Leave application submitted successfully! It has been routed to the Faculty Dashboard for approval.';
         } else {
@@ -53,31 +60,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $file_name = 'Assignment_Unit_' . $unit . '.pdf';
 
         if (isset($_FILES['assignment_file']) && $_FILES['assignment_file']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = 'uploads/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $file_name = $upload_dir . basename($_FILES['assignment_file']['name']);
-            move_uploaded_file($_FILES['assignment_file']['tmp_name'], $file_name);
+            $file_name = basename($_FILES['assignment_file']['name']);
+            if (!is_dir(__DIR__ . '/uploads')) { mkdir(__DIR__ . '/uploads', 0777, true); }
+            move_uploaded_file($_FILES['assignment_file']['tmp_name'], __DIR__ . '/uploads/' . $file_name);
+            $file_name = 'uploads/' . $file_name;
         } elseif (isset($_POST['file_name']) && !empty($_POST['file_name'])) {
             $file_name = trim($_POST['file_name']);
         }
 
-        // Find assignment by unit and update status
-        $updated = false;
-        foreach ($db['assignments'] as &$assignment) {
-            if ($assignment['unit'] === $unit) {
-                $assignment['status'] = 'submitted';
-                $assignment['file'] = $file_name;
-                $assignment['marks'] = 'Pending';
-                $updated = true;
+        // Check if submission already exists
+        $found = false;
+        if (!isset($db['assignment_submissions'])) { $db['assignment_submissions'] = []; }
+        foreach ($db['assignment_submissions'] as &$sub) {
+            if ($sub['assignment_unit'] == $unit && $sub['student_id'] === $student_id) {
+                $sub['file'] = $file_name;
+                $sub['status'] = 'submitted';
+                $sub['marks'] = 'Pending';
+                $found = true;
                 break;
             }
         }
-        if ($updated) {
-            save_db($db);
-            $success_message = 'Assignment for Unit ' . $unit . ' submitted successfully!';
-        } else {
-            $error_message = 'Failed to submit assignment. Unit not found.';
+
+        if (!$found) {
+            $db['assignment_submissions'][] = [
+                'id' => count($db['assignment_submissions']) + 1,
+                'assignment_unit' => $unit,
+                'student_id' => $student_id,
+                'student_name' => $user['name'],
+                'file' => $file_name,
+                'status' => 'submitted',
+                'marks' => 'Pending'
+            ];
         }
+        
+        save_db($db);
+        $success_message = 'Assignment for Unit ' . $unit . ' submitted successfully!';
     } elseif (isset($_POST['action']) && $_POST['action'] === 'submit_grievance') {
         $title = trim($_POST['title']);
         $category = trim($_POST['category']);
@@ -113,8 +130,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Reload database to get fresh updates
-$db = get_db();
+// Fetch fresh updates
+$notices = $db['notices'] ?? [];
+$assignments = $db['assignments'] ?? [];
+$leaves = [];
+foreach ($db['leaves'] ?? [] as $leave) {
+    if (isset($leave['applicant_name']) && $leave['applicant_name'] === $user['name']) {
+        $leaves[] = $leave;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,7 +148,7 @@ $db = get_db();
     <title>College ERP Portal - Student Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="assets/js/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="theme-student">
     <div class="dashboard-wrapper">
@@ -140,10 +164,11 @@ $db = get_db();
                 </div>
                 <ul class="sidebar-nav">
                     <li><a class="sidebar-nav-item" onclick="switchTab('profile', this)"><i class="fa-solid fa-id-card"></i><span>My Profile</span></a></li>
+                    <li><a class="sidebar-nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('assignments', this)"><i class="fa-solid fa-file-invoice"></i><span>Assignments</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('leaves', this)"><i class="fa-solid fa-envelope-open-text"></i><span>Leave Requests</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('grievance', this)"><i class="fa-solid fa-circle-question"></i><span>Grievance</span></a></li>
-                    <li><a class="sidebar-nav-item active" onclick="switchTab('notices', this)"><i class="fa-solid fa-bullhorn"></i><span>Notices</span></a></li>
+                    <li><a class="sidebar-nav-item" onclick="switchTab('notices', this)"><i class="fa-solid fa-bullhorn"></i><span>Notices</span></a></li>
                 </ul>
             </div>
             <div class="sidebar-footer">
@@ -156,15 +181,14 @@ $db = get_db();
             <!-- Header Widget -->
             <header class="dashboard-header">
                 <div class="page-title-box">
-                    <h2 id="currentTabTitle">Notices</h2>
-                    <p id="currentTabSubtitle">Stay updated with the latest announcements and important information.</p>
+                    <h2 id="currentTabTitle">Dashboard</h2>
+                    <p id="currentTabSubtitle">Quick access to all essential student services.</p>
                 </div>
                 <div class="user-profile-widget">
                     <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#3b82f6'});">
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">
-                        <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="User Avatar">
                         <div class="user-details">
                             <span class="name"><?php echo htmlspecialchars($user['name']); ?></span>
                             <span class="role"><?php echo htmlspecialchars($user['dept']); ?></span>
@@ -188,9 +212,59 @@ $db = get_db();
             <?php endif; ?>
 
             <!-- ============================================ -->
+            <!-- 0. DASHBOARD PAGE                            -->
+            <!-- ============================================ -->
+            <div id="tab-dashboard" class="app-view active">
+                <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Quick Access</h3>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                    
+                    <!-- Assignments Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                        <h4 style="color: #6366f1; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Assignments</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View your assignments and submit your work.</p>
+                        <button onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[2])" style="width: 100%; background: transparent; border: 1px solid #d8b4fe; color: #6366f1; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Assignments <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                    </div>
+
+                    <!-- Leave Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-regular fa-calendar-check"></i>
+                        </div>
+                        <h4 style="color: #10b981; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Leave</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Apply for leave and check your leave status.</p>
+                        <button onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[3])" style="width: 100%; background: transparent; border: 1px solid #86efac; color: #10b981; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Leave <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                    </div>
+
+                    <!-- Grievance Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #ffedd5; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-regular fa-comments"></i>
+                        </div>
+                        <h4 style="color: #f97316; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Grievance</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Raise a grievance and track its resolution.</p>
+                        <button onclick="switchTab('grievance', document.querySelectorAll('.sidebar-nav-item')[4])" style="width: 100%; background: transparent; border: 1px solid #fdba74; color: #f97316; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Grievance <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                    </div>
+
+                    <!-- Notice Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #dbeafe; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-regular fa-bell"></i>
+                        </div>
+                        <h4 style="color: #3b82f6; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Notice</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View all the important notices and updates.</p>
+                        <button onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[5])" style="width: 100%; background: transparent; border: 1px solid #93c5fd; color: #3b82f6; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Notice <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ============================================ -->
             <!-- 1. NOTICES PAGE                              -->
             <!-- ============================================ -->
-            <div id="tab-notices" class="app-view active">
+            <div id="tab-notices" class="app-view">
                 <div class="notice-hero">
                     <div class="notice-hero-icon">
                         <i class="fa-solid fa-bullhorn"></i>
@@ -224,7 +298,7 @@ $db = get_db();
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($db['notices'] as $notice): ?>
+                            <?php foreach ($notices as $notice): ?>
                                 <tr>
                                     <td><?php echo $notice['id']; ?></td>
                                     <td>
@@ -246,11 +320,11 @@ $db = get_db();
                                                 $ext = pathinfo($notice['attachment'], PATHINFO_EXTENSION); 
                                                 $badge_class = ($ext === 'pdf') ? 'pdf' : 'docx';
                                             ?>
-                                            <a href="#" onclick="showBuildAlert(event)" class="attachment-badge <?php echo $badge_class; ?>">
+                                            <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="attachment-badge <?php echo $badge_class; ?>">
                                                 <i class="fa-regular <?php echo ($badge_class==='pdf')?'fa-file-pdf':'fa-file-word'; ?>"></i>
-                                                <span><?php echo basename(htmlspecialchars($notice['attachment'])); ?> (<?php echo $notice['size']; ?>)</span>
+                                                <span><?php echo htmlspecialchars($notice['attachment']); ?> (<?php echo $notice['size']; ?>)</span>
                                             </a>
-                                            <a href="#" onclick="showBuildAlert(event)" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;">
+                                            <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;">
                                                 <i class="fa-solid fa-download"></i>
                                             </a>
                                         <?php else: ?>
@@ -261,12 +335,6 @@ $db = get_db();
                             <?php endforeach; ?>
                         </tbody>
                     </table>
-                    <div class="pagination-container">
-                        <button class="pagination-btn"><i class="fa-solid fa-angle-left"></i></button>
-                        <button class="pagination-btn active">1</button>
-                        <button class="pagination-btn">2</button>
-                        <button class="pagination-btn"><i class="fa-solid fa-angle-right"></i></button>
-                    </div>
                 </div>
             </div>
 
@@ -286,34 +354,71 @@ $db = get_db();
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($db['assignments'] as $assign): ?>
+                            <?php foreach ($assignments as $assign): 
+                                // Find student's submission
+                                $my_sub = null;
+                                if (isset($db['assignment_submissions'])) {
+                                    foreach ($db['assignment_submissions'] as $sub) {
+                                        if ($sub['assignment_unit'] == $assign['unit'] && $sub['student_id'] === $student_id) {
+                                            $my_sub = $sub;
+                                            break;
+                                        }
+                                    }
+                                }
+                                $status = $my_sub ? $my_sub['status'] : 'pending';
+                                $marks = $my_sub ? $my_sub['marks'] : 'Pending';
+                                $file = $my_sub ? $my_sub['file'] : '';
+                            ?>
                                 <tr>
-                                    <td><?php echo $assign['unit']; ?></td>
-                                    <td>
-                                        <div class="notice-title"><?php echo htmlspecialchars($assign['title']); ?></div>
-                                        <div class="notice-desc"><?php echo htmlspecialchars($assign['desc']); ?></div>
+                                    <td style="font-weight: 500; padding: 1.5rem; text-align: center; color: #4b5563;"><?php echo $assign['unit']; ?></td>
+                                    <td style="padding: 1.5rem;">
+                                        <div style="display: flex; gap: 1rem; align-items: center;">
+                                            <div style="width: 44px; height: 44px; background: #f3e8ff; color: #8b5cf6; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;">
+                                                <i class="fa-solid fa-file-lines"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 700; color: #1e293b; font-size: 1rem; margin-bottom: 0.25rem;">Unit <?php echo $assign['unit']; ?> - <?php echo htmlspecialchars($assign['title']); ?></div>
+                                                <div style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.25rem;"><?php echo htmlspecialchars($assign['desc']); ?></div>
+                                                <?php if (!empty($assign['file'])): ?>
+                                                    <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="font-size: 0.8rem; color: #4f46e5; text-decoration: none; display: inline-block;"><i class="fa-solid fa-paperclip"></i> Question Document</a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td>
-                                        <div class="date-cell"><i class="fa-regular fa-clock" style="margin-right: 0.35rem; color: #f59e0b;"></i><?php echo htmlspecialchars($assign['due']); ?></div>
+                                    <td style="padding: 1.5rem;">
+                                        <?php 
+                                            // Split due date into date and time
+                                            $parts = explode(' ', htmlspecialchars($assign['due']));
+                                            $timeStr = (count($parts) >= 5) ? $parts[3] . ' ' . $parts[4] : '11:59 PM';
+                                            $dateStr = (count($parts) >= 3) ? $parts[0] . ' ' . $parts[1] . ' ' . $parts[2] : htmlspecialchars($assign['due']);
+                                        ?>
+                                        <div style="display: flex; flex-direction: column; gap: 0.25rem; color: #334155;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+                                                <i class="fa-regular fa-calendar" style="color: #6366f1;"></i> <?php echo $dateStr; ?>
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: #64748b; margin-left: 1.5rem;">
+                                                <?php echo $timeStr; ?>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td style="text-align: center;">
-                                        <?php if ($assign['status'] === 'graded' || $assign['status'] === 'submitted'): ?>
-                                            <div class="upload-success-text">
+                                    <td style="text-align: center; padding: 1.5rem;">
+                                        <?php if ($status === 'graded' || $status === 'submitted'): ?>
+                                            <div style="display: inline-flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 600;">
                                                 <i class="fa-solid fa-circle-check"></i>
-                                                <span title="<?php echo htmlspecialchars($assign['file']); ?>">Submitted</span>
+                                                <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="color: #10b981; text-decoration: none;" title="<?php echo htmlspecialchars($file); ?>">Submitted</a>
                                             </div>
                                         <?php else: ?>
-                                            <button class="btn-upload-assignment" onclick="openUploadModal(<?php echo $assign['unit']; ?>, '<?php echo htmlspecialchars($assign['title']); ?>')">
+                                            <button onclick="openUploadModal(<?php echo $assign['unit']; ?>, '<?php echo htmlspecialchars($assign['title']); ?>')" style="background: white; border: 1.5px solid #d8b4fe; color: #8b5cf6; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
                                                 <i class="fa-solid fa-arrow-up-from-bracket"></i>
-                                                <span>Upload</span>
+                                                Upload
                                             </button>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="text-align: center;">
-                                        <?php if ($assign['status'] === 'graded'): ?>
-                                            <span class="status-pill graded"><?php echo htmlspecialchars($assign['marks']); ?></span>
+                                    <td style="text-align: center; padding: 1.5rem;">
+                                        <?php if ($status === 'graded'): ?>
+                                            <span style="background: #dcfce7; color: #15803d; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; min-width: 60px;"><?php echo htmlspecialchars($marks); ?></span>
                                         <?php else: ?>
-                                            <span class="status-pill pending">Pending</span>
+                                            <span style="background: #ffedd5; color: #f97316; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; display: inline-block; min-width: 60px;">Pending</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -408,7 +513,7 @@ $db = get_db();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($db['leaves'] as $leave): ?>
+                                <?php foreach ($leaves as $leave): ?>
                                     <tr>
                                         <td><?php echo $leave['id']; ?></td>
                                         <td>
@@ -418,7 +523,7 @@ $db = get_db();
                                                     $is_pdf = (strtolower($ext) === 'pdf');
                                                 ?>
                                                 <i class="fa-solid <?php echo $is_pdf?'fa-file-pdf':'fa-file-word'; ?>" style="font-size:1.15rem; color:<?php echo $is_pdf?'#ef4444':'#0284c7'; ?>"></i>
-                                                <span class="pub-name" style="font-size:0.9rem; font-weight:500;"><?php echo htmlspecialchars($leave['file']); ?></span>
+                                                <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);"><?php echo htmlspecialchars($leave['file']); ?></a>
                                             </div>
                                         </td>
                                         <td>
@@ -688,6 +793,10 @@ $db = get_db();
                 document.getElementById('tab-grievance').classList.add('active');
                 headerTitle.textContent = "Grievance";
                 headerSubtitle.textContent = "Submit issues or report institutional suggestions.";
+            } else if (tabName === 'dashboard') {
+                document.getElementById('tab-dashboard').classList.add('active');
+                headerTitle.textContent = "Dashboard";
+                headerSubtitle.textContent = "Quick access to all essential student portals and services.";
             } else if (tabName === 'profile') {
                 document.getElementById('tab-profile').classList.add('active');
                 headerTitle.textContent = "My Profile";
@@ -819,26 +928,6 @@ $db = get_db();
             });
 
             sortedRows.forEach(row => tbody.appendChild(row));
-        }
-        function showBuildAlert(e) {
-            e.preventDefault();
-            console.log("showBuildAlert triggered");
-            try {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: 'Build in Progress',
-                        text: 'This feature is currently under development.',
-                        icon: 'info',
-                        confirmButtonText: 'OK'
-                    });
-                } else {
-                    console.warn("Swal is undefined, falling back to native alert");
-                    alert('Build in Progress');
-                }
-            } catch (err) {
-                console.error("SweetAlert error:", err);
-                alert('Build in Progress');
-            }
         }
     </script>
 </body>

@@ -72,7 +72,7 @@ if (isset($_SESSION['user']) && isset($_SESSION['role'])) {
             </div>
 
             <!-- Admin Card -->
-            <div class="role-card admin glass-container" onclick="window.location.href='login.php?role=admin'">
+            <div class="role-card admin glass-container" onclick="showAdminAlert()">
                 <div class="role-icon-box">
                     <i class="fa-solid fa-shield-gear"></i>
                 </div>
@@ -84,5 +84,18 @@ if (isset($_SESSION['user']) && isset($_SESSION['role'])) {
             </div>
         </div>
     </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function showAdminAlert() {
+            Swal.fire({
+                icon: 'info',
+                title: 'Under Construction',
+                text: 'The Admin module is currently under construction. Please check back later!',
+                confirmButtonColor: '#f97316'
+            });
+        }
+    </script>
 </body>
 </html>

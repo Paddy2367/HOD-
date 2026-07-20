@@ -58,10 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $file_name = '';
 
         if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = 'uploads/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            $file_name = $upload_dir . basename($_FILES['attachment']['name']);
-            move_uploaded_file($_FILES['attachment']['tmp_name'], $file_name);
+            $file_name = basename($_FILES['attachment']['name']);
         }
         
         if (!empty($title) && !empty($desc)) {
@@ -123,25 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     
     // -- ASSIGNMENT GRADING --
-    elseif ($action === 'grade_assignment') {
-        $unit = intval($_POST['unit']);
-        $marks = trim($_POST['marks']);
-        
-        $updated = false;
-        foreach ($db['assignments'] as &$a) {
-            if ($a['unit'] === $unit) {
-                $a['status'] = 'graded';
-                $a['marks'] = $marks;
-                $updated = true;
-                break;
-            }
-        }
-        if ($updated) {
-            save_db($db);
-            $success_message = "Assignment graded successfully.";
-        }
-    }
-    
+    // Grading moved to faculty dashboard. HOD only views assignments.
     // -- REPORTS --
     elseif ($action === 'download_report') {
         $type = $_POST['report_type'];
@@ -206,35 +185,34 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
 <body class="theme-hod">
     <div class="dashboard-wrapper">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar" style="background: #ffffff; color: #4b5563; border-right: 1px solid var(--border-color);">
+        <aside class="sidebar">
             <div class="sidebar-top">
-                <div class="sidebar-brand" style="color: #111827;">
-                    <i class="fa-solid fa-building-columns" style="color: var(--primary-color);"></i>
+                <div class="sidebar-brand">
+                    <i class="fa-solid fa-graduation-cap"></i>
                     <div>
-                        <span>SW Portal</span>
-                        <span class="sub" style="color: var(--text-muted);">HOD Dashboard</span>
+                        <span>College ERP</span>
+                        <span class="sub">HOD Portal</span>
                     </div>
                 </div>
                 <ul class="sidebar-nav">
-                    <li><a class="sidebar-nav-item active" style="color: #4b5563;" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="assignments" onclick="switchTab('assignments')"><i class="fa-solid fa-book"></i><span>Assignments</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="leaves" onclick="switchTab('leaves')"><i class="fa-solid fa-calendar-minus"></i><span>Leaves</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="grievances" onclick="switchTab('grievances')"><i class="fa-solid fa-circle-exclamation"></i><span>Grievances</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="notices" onclick="switchTab('notices')"><i class="fa-solid fa-bullhorn"></i><span>Notices</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="students" onclick="switchTab('students')"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="faculty" onclick="switchTab('faculty')"><i class="fa-solid fa-chalkboard-user"></i><span>Faculty</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="reports" onclick="switchTab('reports')"><i class="fa-solid fa-chart-column"></i><span>Reports</span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="approvals" onclick="switchTab('approvals')"><i class="fa-solid fa-check-double"></i><span>Approvals <span class="badge" style="background:var(--primary-color);color:white;border-radius:10px;padding:2px 6px;font-size:0.7rem;margin-left:auto;"><?= $pending_approvals ?></span></span></a></li>
-                    <li><a class="sidebar-nav-item" style="color: #4b5563;" data-tab="settings" onclick="switchTab('settings')"><i class="fa-solid fa-gear"></i><span>Settings</span></a></li>
+                    <li><a class="sidebar-nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="assignments" onclick="switchTab('assignments')"><i class="fa-solid fa-book"></i><span>Assignments</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="leaves" onclick="switchTab('leaves')"><i class="fa-solid fa-calendar-minus"></i><span>Leaves</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="grievances" onclick="switchTab('grievances')"><i class="fa-solid fa-circle-exclamation"></i><span>Grievances</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="notices" onclick="switchTab('notices')"><i class="fa-solid fa-bullhorn"></i><span>Notices</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="students" onclick="switchTab('students')"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="faculty" onclick="switchTab('faculty')"><i class="fa-solid fa-chalkboard-user"></i><span>Faculty</span></a></li>
+                    <li><a class="sidebar-nav-item" data-tab="approvals" onclick="switchTab('approvals')"><i class="fa-solid fa-check-double"></i><span>Approvals</span> <span class="notification-badge" style="background: var(--primary-color); color: white; padding: 2px 6px; border-radius: 12px; font-size: 0.75rem; margin-left: auto;"><?= $pending_approvals ?></span></a></li>
                 </ul>
             </div>
             <div class="sidebar-footer">
-                <a href="logout.php" class="sidebar-nav-item" style="color: #ef4444;"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+                <a href="logout.php" class="sidebar-nav-item" style="background: rgba(239, 68, 68, 0.1); color: #f87171;"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- Main Dashboard View Area -->
         <main class="main-content">
+            <!-- Header Widget -->
             <header class="dashboard-header">
                 <div class="page-title-box">
                     <h2 id="currentTabTitle">Overview</h2>
@@ -245,10 +223,10 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">
-                        <img src="<?= htmlspecialchars($user['avatar']) ?>" alt="User Avatar">
+                        <img src="<?= htmlspecialchars($user['avatar'] ?? 'https://ui-avatars.com/api/?name='.urlencode($user['name']).'&background=random') ?>" alt="User Avatar">
                         <div class="user-details">
                             <span class="name"><?= htmlspecialchars($user['name']) ?></span>
-                            <span class="role">Head of Department</span>
+                            <span class="role"><?= htmlspecialchars($user['dept'] ?? 'IT Department') ?></span>
                         </div>
                     </div>
                 </div>
@@ -270,126 +248,69 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
 
             <!-- Dashboard View -->
             <div id="view-dashboard" class="app-view active">
-                <div class="hod-grid">
+                <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Quick Access</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                    
                     <!-- Assignments Card -->
-                    <div class="hod-card purple">
-                        <div class="hod-card-header">
-                            <div class="hod-card-icon"><i class="fa-solid fa-book"></i></div>
-                            <div class="hod-card-title">
-                                <h3>Assignments</h3>
-                                <p>Manage & Review</p>
-                            </div>
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-solid fa-clipboard-list"></i>
                         </div>
-                        <div class="hod-card-body">
-                            <div class="hod-stat">
-                                <span class="hod-stat-label">Total Published</span>
-                                <span class="hod-stat-value"><?= count($db['assignments']) ?></span>
-                            </div>
-                        </div>
-                        <div class="hod-card-footer">
-                            <button class="btn-hod-action" onclick="switchTab('assignments')">Manage</button>
-                        </div>
+                        <h4 style="color: #6366f1; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Assignments</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Create, assign and review assignments for students and track submissions.</p>
+                        <button onclick="switchTab('assignments')" style="width: 100%; background: transparent; border: 1px solid #d8b4fe; color: #6366f1; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Manage Assignments <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
                     </div>
 
-                    <!-- Leaves Card -->
-                    <div class="hod-card green">
-                        <div class="hod-card-header">
-                            <div class="hod-card-icon"><i class="fa-solid fa-calendar-minus"></i></div>
-                            <div class="hod-card-title">
-                                <h3>Leave Requests</h3>
-                                <p>Faculty & Students</p>
-                            </div>
+                    <!-- Leave Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-regular fa-calendar-check"></i>
                         </div>
-                        <div class="hod-card-body">
-                            <div class="hod-stat">
-                                <span class="hod-stat-label">Pending Approval</span>
-                                <span class="hod-stat-value"><?= $pending_leaves ?></span>
-                            </div>
-                        </div>
-                        <div class="hod-card-footer">
-                            <button class="btn-hod-action" onclick="switchTab('leaves')">Review</button>
-                        </div>
+                        <h4 style="color: #10b981; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Leave</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Review and approve leave applications of faculty and staff.</p>
+                        <button onclick="switchTab('leaves')" style="width: 100%; background: transparent; border: 1px solid #86efac; color: #10b981; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Review Leave Requests <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
                     </div>
 
                     <!-- Grievance Card -->
-                    <div class="hod-card orange">
-                        <div class="hod-card-header">
-                            <div class="hod-card-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
-                            <div class="hod-card-title">
-                                <h3>Grievances</h3>
-                                <p>Student Complaints</p>
-                            </div>
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #ffedd5; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-regular fa-comments"></i>
                         </div>
-                        <div class="hod-card-body">
-                            <div class="hod-stat">
-                                <span class="hod-stat-label">Unresolved</span>
-                                <span class="hod-stat-value"><?= $unresolved_grievances ?></span>
-                            </div>
-                        </div>
-                        <div class="hod-card-footer">
-                            <button class="btn-hod-action" onclick="switchTab('grievances')">Resolve</button>
-                        </div>
+                        <h4 style="color: #f97316; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Grievance</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Review and resolve grievances raised by students and faculty.</p>
+                        <button onclick="switchTab('grievances')" style="width: 100%; background: transparent; border: 1px solid #fdba74; color: #f97316; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">View Grievances <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
                     </div>
 
-                    <!-- Notices Card -->
-                    <div class="hod-card blue">
-                        <div class="hod-card-header">
-                            <div class="hod-card-icon"><i class="fa-solid fa-bullhorn"></i></div>
-                            <div class="hod-card-title">
-                                <h3>Notices</h3>
-                                <p>Announcements</p>
-                            </div>
+                    <!-- Notice Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #dbeafe; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-regular fa-bell"></i>
                         </div>
-                        <div class="hod-card-body">
-                            <div class="hod-stat">
-                                <span class="hod-stat-label">Active Notices</span>
-                                <span class="hod-stat-value"><?= $total_notices ?></span>
-                            </div>
-                        </div>
-                        <div class="hod-card-footer">
-                            <button class="btn-hod-action" onclick="switchTab('notices')">Publish</button>
-                        </div>
+                        <h4 style="color: #3b82f6; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Notice</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Create and publish notices for students and faculty of the department.</p>
+                        <button onclick="switchTab('notices')" style="width: 100%; background: transparent; border: 1px solid #93c5fd; color: #3b82f6; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Manage Notices <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
                     </div>
 
                     <!-- Students Card -->
-                    <div class="hod-card teal">
-                        <div class="hod-card-header">
-                            <div class="hod-card-icon"><i class="fa-solid fa-user-graduate"></i></div>
-                            <div class="hod-card-title">
-                                <h3>Students</h3>
-                                <p>Directory & Analytics</p>
-                            </div>
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #ccfbf1; color: #0d9488; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-solid fa-users"></i>
                         </div>
-                        <div class="hod-card-body">
-                            <div class="hod-stat">
-                                <span class="hod-stat-label">Total Enrolled</span>
-                                <span class="hod-stat-value"><?= $total_students ?></span>
-                            </div>
-                        </div>
-                        <div class="hod-card-footer">
-                            <button class="btn-hod-action" onclick="switchTab('students')">View</button>
-                        </div>
+                        <h4 style="color: #0d9488; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Students</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View student list, academic performance and other department details.</p>
+                        <button onclick="switchTab('students')" style="width: 100%; background: transparent; border: 1px solid #5eead4; color: #0d9488; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">View Students <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
                     </div>
 
                     <!-- Faculty Card -->
-                    <div class="hod-card indigo">
-                        <div class="hod-card-header">
-                            <div class="hod-card-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
-                            <div class="hod-card-title">
-                                <h3>Faculty</h3>
-                                <p>Staff Management</p>
-                            </div>
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                            <i class="fa-solid fa-user-tie"></i>
                         </div>
-                        <div class="hod-card-body">
-                            <div class="hod-stat">
-                                <span class="hod-stat-label">Active Staff</span>
-                                <span class="hod-stat-value"><?= $total_faculty ?></span>
-                            </div>
-                        </div>
-                        <div class="hod-card-footer">
-                            <button class="btn-hod-action" onclick="switchTab('faculty')">View</button>
-                        </div>
+                        <h4 style="color: #4338ca; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Faculty</h4>
+                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View faculty list, workload, attendance and other department details.</p>
+                        <button onclick="switchTab('faculty')" style="width: 100%; background: transparent; border: 1px solid #c7d2fe; color: #4338ca; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">View Faculty <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
                     </div>
+
                 </div>
 
                 <div class="data-table-container">
@@ -430,25 +351,25 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($db['assignments'] as $a): ?>
+                            <?php foreach ($db['assignments'] as $a): 
+                                $submission_count = 0;
+                                if (isset($db['assignment_submissions'])) {
+                                    foreach ($db['assignment_submissions'] as $sub) {
+                                        if ($sub['assignment_unit'] == $a['unit']) {
+                                            $submission_count++;
+                                        }
+                                    }
+                                }
+                            ?>
                             <tr>
                                 <td>
                                     <div class="notice-title">Unit <?= htmlspecialchars($a['unit']) ?> - <?= htmlspecialchars($a['title']) ?></div>
                                     <div class="notice-desc">By <?= htmlspecialchars($a['created_by']) ?></div>
                                 </td>
                                 <td><?= htmlspecialchars($a['due']) ?></td>
-                                <td><span class="status-pill <?= htmlspecialchars($a['status']) ?>"><?= ucfirst(htmlspecialchars($a['status'])) ?></span></td>
+                                <td><span class="status-pill info">Active</span></td>
                                 <td>
-                                    <?php if ($a['status'] === 'submitted' || $a['status'] === 'pending'): ?>
-                                    <form method="POST" style="display:flex; gap:0.5rem; align-items:center;">
-                                        <input type="hidden" name="action" value="grade_assignment">
-                                        <input type="hidden" name="unit" value="<?= $a['unit'] ?>">
-                                        <input type="text" name="marks" placeholder="Marks (e.g. 10/10)" style="padding:0.25rem; width: 100px; font-size:0.85rem;" required>
-                                        <button type="submit" class="btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.85rem;">Grade</button>
-                                    </form>
-                                    <?php elseif ($a['status'] === 'graded'): ?>
-                                    <span style="font-size:0.85rem; font-weight:600; color:var(--primary-color);">Graded: <?= htmlspecialchars($a['marks']) ?></span>
-                                    <?php endif; ?>
+                                    <span style="font-size:0.85rem; font-weight:600; color:var(--primary-color);"><?= $submission_count ?> Submissions</span>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -581,8 +502,8 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                 <td>
                                     <?php if ($n['attachment']): ?>
                                         <?php $ext = pathinfo($n['attachment'], PATHINFO_EXTENSION); ?>
-                                        <a href="<?= htmlspecialchars($n['attachment']) ?>" class="attachment-badge <?= $ext ?>" target="_blank" style="text-decoration:none;">
-                                            <i class="fa-solid fa-file-<?= $ext ?>"></i> <?= basename(htmlspecialchars($n['attachment'])) ?>
+                                        <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="attachment-badge <?= $ext ?>" style="text-decoration:none;">
+                                            <i class="fa-solid fa-file-<?= $ext ?>"></i> <?= htmlspecialchars($n['attachment']) ?>
                                         </a>
                                     <?php else: ?>
                                         <span class="notice-desc">No File</span>

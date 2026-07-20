@@ -14,47 +14,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
     $role = $_POST['role'];
 
-    // Authenticate credentials
-    if ($role === 'student' && $username === '125UIT1080' && $password === '12345678') {
+    require_once 'config.php';
+
+    // Authenticate credentials via database
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? AND role = ?");
+    $stmt->execute([$username, $role]);
+    $user = $stmt->fetch();
+
+    if ($user && password_verify($password, $user['password_hash'])) {
         $_SESSION['user'] = [
-            'username' => '125UIT1080',
-            'name' => 'Prasad Kulkarni',
-            'dept' => 'IT - Div A (A2)',
-            'avatar' => 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop'
+            'id' => $user['id'],
+            'username' => $user['username'],
+            'name' => $user['name'],
+            'dept' => $user['dept'],
+            'avatar' => $user['avatar']
         ];
-        $_SESSION['role'] = 'student';
-        header("Location: student_dashboard.php");
-        exit;
-    } elseif ($role === 'faculty' && $username === 'faculty1' && $password === '12345678') {
-        $_SESSION['user'] = [
-            'username' => 'faculty1',
-            'name' => 'Prof. Rajesh Sharma',
-            'dept' => 'IT Department',
-            'avatar' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop'
-        ];
-        $_SESSION['role'] = 'faculty';
-        header("Location: faculty_dashboard.php");
-        exit;
-    } elseif ($role === 'hod' && $username === 'hod1' && $password === '12345678') {
-        $_SESSION['user'] = [
-            'username' => 'hod1',
-            'name' => 'Prof. Amit Deshmukh',
-            'dept' => 'IT Department Head',
-            'avatar' => 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=150&auto=format&fit=crop'
-        ];
-        $_SESSION['role'] = 'hod';
-        header("Location: hod_dashboard.php");
-        exit;
-    } elseif ($role === 'admin' && $username === 'admin1' && $password === '12345678') {
-        $_SESSION['user'] = [
-            'username' => 'admin1',
-            'name' => 'System Admin',
-            'dept' => 'Administration',
-            'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop'
-        ];
-        $_SESSION['role'] = 'admin';
-        header("Location: admin_dashboard.php");
-        exit;
+        $_SESSION['role'] = $user['role'];
+        
+        switch ($user['role']) {
+            case 'student': header("Location: student_dashboard.php"); exit;
+            case 'faculty': header("Location: faculty_dashboard.php"); exit;
+            case 'hod': header("Location: hod_dashboard.php"); exit;
+            case 'admin': header("Location: admin_dashboard.php"); exit;
+        }
     } else {
         $error_message = 'Invalid username or password for ' . ucfirst($role) . ' portal.';
     }
@@ -93,6 +75,7 @@ switch ($role) {
     <title>College ERP Portal - <?php echo $role_title; ?> Login</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="<?php echo $page_theme_class; ?>">
     <div class="login-container">
@@ -198,7 +181,7 @@ switch ($role) {
                             <input type="checkbox" name="remember">
                             <span>Remember Me</span>
                         </label>
-                        <a href="#" class="forgot-password" onclick="alert('Forgot Password flow: An email reset link has been simulated. Check your registered inbox!')">Forgot Password?</a>
+                        <a href="#" class="forgot-password" onclick="forgotPasswordFlow(); return false;">Forgot Password?</a>
                     </div>
 
                     <!-- Login Submit Button -->
@@ -312,6 +295,93 @@ switch ($role) {
         window.onload = function() {
             generateCaptcha();
         };
+
+        function forgotPasswordFlow() {
+            const otp = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            Swal.fire({
+                title: 'Mock OTP Sent',
+                html: 'For testing purposes, your OTP is: <strong style="font-size: 1.5rem; color: #4f46e5;">' + otp + '</strong>',
+                icon: 'info',
+                confirmButtonText: 'Continue',
+                confirmButtonColor: '#6366f1'
+            }).then(() => {
+                Swal.fire({
+                    title: 'Enter OTP',
+                    input: 'text',
+                    inputLabel: 'Please enter the 4-digit OTP',
+                    inputPlaceholder: 'e.g. 1234',
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#ef4444',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'You need to enter the OTP!'
+                        }
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (result.value === otp) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'OTP Verified. Proceeding to password reset...',
+                                icon: 'success',
+                                confirmButtonColor: '#6366f1'
+                            }).then(() => {
+                                Swal.fire({
+                                    title: 'Reset Password',
+                                    html:
+                                        '<input id="swal-input-user" class="swal2-input" placeholder="Enter your username (e.g. prasad)">' +
+                                        '<input id="swal-input-pass" class="swal2-input" type="password" placeholder="Enter new password">',
+                                    focusConfirm: false,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Reset Password',
+                                    confirmButtonColor: '#10b981',
+                                    preConfirm: () => {
+                                        const user = document.getElementById('swal-input-user').value;
+                                        const pass = document.getElementById('swal-input-pass').value;
+                                        if (!user || !pass) {
+                                            Swal.showValidationMessage('Please enter both username and new password');
+                                        }
+                                        return { username: user, new_password: pass };
+                                    }
+                                }).then((formResult) => {
+                                    if (formResult.isConfirmed) {
+                                        const formData = new FormData();
+                                        formData.append('username', formResult.value.username);
+                                        formData.append('new_password', formResult.value.new_password);
+                                        
+                                        fetch('reset_password.php', {
+                                            method: 'POST',
+                                            body: formData
+                                        })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (data.success) {
+                                                Swal.fire('Updated!', 'Your password has been successfully reset.', 'success');
+                                            } else {
+                                                Swal.fire('Error', data.message || 'Could not reset password', 'error');
+                                            }
+                                        })
+                                        .catch(() => {
+                                            Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                                        });
+                                    }
+                                });
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Incorrect OTP',
+                                text: 'The OTP you entered is wrong. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#ef4444'
+                            });
+                        }
+                    }
+                });
+            });
+        }
     </script>
 </body>
 </html>

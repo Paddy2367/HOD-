@@ -72,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         <i class="fa-regular fa-bell"></i>
                     </div>
                     <div class="user-avatar-box">
-                        <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="User Avatar">
                         <div class="user-details">
                             <span class="name"><?php echo htmlspecialchars($user['name']); ?></span>
                             <span class="role"><?php echo htmlspecialchars($user['dept']); ?></span>
