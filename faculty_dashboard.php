@@ -11,8 +11,23 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'faculty') {
 $user = $_SESSION['user'];
 $db = get_db();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_notifications') {
+    $db['recent_activity'] = [];
+    save_db($db);
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 $success_message = '';
 $error_message = '';
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    unset($_SESSION['success_message']);
+}
+if (isset($_SESSION['error_message'])) {
+    $error_message = $_SESSION['error_message'];
+    unset($_SESSION['error_message']);
+}
 
 // Handle Approve / Reject actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['approve', 'reject'])) {
@@ -24,11 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
         if ($leave['id'] === $leave_id) {
             if ($action === 'approve') {
                 $leave['status'] = 'Approved';
-                $success_message = 'Leave request #' . $leave_id . ' (Reason: ' . $leave['reason'] . ') has been Approved.';
+                $_SESSION['success_message'] = 'Leave request #' . $leave_id . ' (Reason: ' . $leave['reason'] . ') has been Approved.';
                 $updated = true;
             } elseif ($action === 'reject') {
                 $leave['status'] = 'Rejected';
-                $success_message = 'Leave request #' . $leave_id . ' (Reason: ' . $leave['reason'] . ') has been Rejected.';
+                $_SESSION['success_message'] = 'Leave request #' . $leave_id . ' (Reason: ' . $leave['reason'] . ') has been Rejected.';
                 $updated = true;
             }
             break;
@@ -38,8 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
     if ($updated) {
         save_db($db);
     } else {
-        $error_message = 'Failed to update leave request status. Request #' . $leave_id . ' not found.';
+        $_SESSION['error_message'] = 'Failed to update leave request status. Request #' . $leave_id . ' not found.';
     }
+    header("Location: faculty_dashboard.php");
+    exit;
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'publish_notice') {
     $title = trim($_POST['title']);
     $desc = trim($_POST['desc']);
@@ -66,10 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             'size' => $file_name ? '1.5MB' : ''
         ];
         save_db($db);
-        $success_message = "Notice published successfully.";
+        $_SESSION['success_message'] = "Notice published successfully.";
     } else {
-        $error_message = "Title and Description are required.";
+        $_SESSION['error_message'] = "Title and Description are required.";
     }
+    header("Location: faculty_dashboard.php");
+    exit;
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'grade_assignment') {
     $sub_id = intval($_POST['assignment_id']);
     $marks = trim($_POST['marks']);
@@ -87,8 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
     }
     if ($updated) {
         save_db($db);
-        $success_message = "Assignment graded successfully.";
+        $_SESSION['success_message'] = "Assignment graded successfully.";
     }
+    header("Location: faculty_dashboard.php");
+    exit;
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'publish_assignment') {
     $title = trim($_POST['title'] ?? '');
     $due_date = trim($_POST['due_date'] ?? '');
@@ -117,10 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             'created_by' => $user['name']
         ];
         save_db($db);
-        $success_message = "Assignment published successfully.";
+        $_SESSION['success_message'] = "Assignment published successfully.";
     } else {
-        $error_message = "Assignment Title is required.";
+        $_SESSION['error_message'] = "Assignment Title is required.";
     }
+    header("Location: faculty_dashboard.php");
+    exit;
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'resolve_grievance') {
     $g_id = intval($_POST['grievance_id']);
     $updated = false;
@@ -133,8 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
     }
     if ($updated) {
         save_db($db);
-        $success_message = "Grievance marked as resolved.";
+        $_SESSION['success_message'] = "Grievance marked as resolved.";
     }
+    header("Location: faculty_dashboard.php");
+    exit;
 }
 
 // Reload database to get fresh updates
@@ -184,8 +209,106 @@ $db = get_db();
                     <p id="currentTabSubtitle">Quick access to all essential faculty services.</p>
                 </div>
                 <div class="user-profile-widget">
-                    <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#10b981'});">
-                        <i class="fa-regular fa-bell"></i>
+                    <div class="notification-wrapper" style="position: relative;">
+                        <div class="notification-bell" id="notificationToggle" style="cursor:pointer;">
+                            <i class="fa-regular fa-bell"></i>
+                            <?php if (!empty($db['recent_activity'])): ?>
+                            <span class="badge" style="position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; font-weight: bold;"><?php echo min(count($db['recent_activity']), 9); ?></span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="notification-dropdown" id="notificationDropdown" style="display: none; position: absolute; top: 120%; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color); z-index: 100; overflow: hidden; cursor: default;">
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+                                <h4 style="margin: 0; font-size: 1rem; color: #1e293b;">Notifications</h4>
+                                <span style="font-size: 0.75rem; color: var(--primary-color); cursor: pointer; font-weight: 600;" onclick="fetch(window.location.href, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'action=clear_notifications'}).then(() => { this.parentElement.nextElementSibling.innerHTML='<div style=\'padding: 2rem 1rem; text-align: center; color: #64748b; font-size: 0.9rem;\'><i class=\'fa-regular fa-bell-slash\' style=\'font-size: 1.5rem; margin-bottom: 0.5rem; color: #cbd5e1;\'></i><br>No new notifications</div>'; let b = document.querySelector('#notificationToggle .badge'); if(b) b.style.display='none'; });">Mark all as read</span>
+                            </div>
+                            <div style="max-height: 350px; overflow-y: auto; text-align: left;">
+                                <?php if (empty($db['recent_activity'])): ?>
+                                    <div style="padding: 2rem 1rem; text-align: center; color: #64748b; font-size: 0.9rem;">
+                                        <i class="fa-regular fa-bell-slash" style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #cbd5e1;"></i><br>
+                                        No new notifications
+                                    </div>
+                                <?php else: ?>
+                                    <?php foreach(array_slice($db['recent_activity'], 0, 5) as $idx => $activity): ?>
+                                    <?php
+                                    $targetTab = 'dashboard';
+                                    $t = strtolower($activity['title'] ?? '');
+                                    if (strpos($t, 'leave') !== false) $targetTab = 'leaves';
+                                    elseif (strpos($t, 'grievance') !== false) $targetTab = 'grievance';
+                                    elseif (strpos($t, 'assignment') !== false) $targetTab = 'assignments';
+                                    elseif (strpos($t, 'notice') !== false) $targetTab = 'notices';
+                                    ?>
+                                    <div onclick="triggerTab('<?php echo $targetTab; ?>')" style="padding: 1rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s; <?php echo $idx === 0 ? 'background: #f0f9ff;' : ''; ?>" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='<?php echo $idx === 0 ? '#f0f9ff' : 'transparent'; ?>'">
+                                        <div style="display: flex; gap: 0.75rem;">
+                                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                <i class="fa-solid fa-bolt"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.9rem; color: #334155; margin-bottom: 0.15rem;"><?php echo htmlspecialchars($activity['title'] ?? 'Notification'); ?></div>
+                                                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.25rem;"><?php echo htmlspecialchars($activity['desc'] ?? ''); ?></div>
+                                                <div style="font-size: 0.7rem; color: #94a3b8;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i> <?php echo htmlspecialchars($activity['time'] ?? 'Just now'); ?></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+
+                        </div>
+                        <script>
+                            function triggerTab(tabName) {
+                                if (!tabName) return;
+                                if (tabName === 'grievance') {
+                                    let hasGrievances = false;
+                                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                                        if ((el.getAttribute('onclick')||'').includes("'grievances'") || el.getAttribute('data-tab') === 'grievances') hasGrievances = true;
+                                    });
+                                    if (hasGrievances) tabName = 'grievances';
+                                }
+                                if (tabName === 'grievances') {
+                                    let hasGrievance = false;
+                                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                                        if ((el.getAttribute('onclick')||'').includes("'grievance'") && !(el.getAttribute('onclick')||'').includes("'grievances'")) hasGrievance = true;
+                                        if (el.getAttribute('data-tab') === 'grievance') hasGrievance = true;
+                                    });
+                                    if (hasGrievance) tabName = 'grievance';
+                                }
+                                
+                                document.getElementById('notificationDropdown').style.display = 'none';
+                                
+                                let items = document.querySelectorAll('.sidebar-nav-item');
+                                let targetEl = null;
+                                for (let i=0; i<items.length; i++) {
+                                    let onclick = items[i].getAttribute('onclick') || '';
+                                    let dataTab = items[i].getAttribute('data-tab') || '';
+                                    if (onclick.includes("'" + tabName + "'") || dataTab === tabName) {
+                                        targetEl = items[i];
+                                        break;
+                                    }
+                                }
+                                
+                                if (typeof switchTab === 'function') {
+                                    if (targetEl && switchTab.length === 2) {
+                                        switchTab(tabName, targetEl);
+                                    } else {
+                                        try { switchTab(tabName); } catch(e) {}
+                                    }
+                                }
+                            }
+
+                            document.getElementById('notificationToggle').addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                var dropdown = document.getElementById('notificationDropdown');
+                                dropdown.style.display = dropdown.style.display === 'none' || dropdown.style.display === '' ? 'block' : 'none';
+                            });
+                            document.addEventListener('click', function(e) {
+                                var dropdown = document.getElementById('notificationDropdown');
+                                var toggle = document.getElementById('notificationToggle');
+                                if (dropdown && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                                    dropdown.style.display = 'none';
+                                }
+                            });
+                        </script>
                     </div>
                     <div class="user-avatar-box">
                         <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="User Avatar">
@@ -199,13 +322,13 @@ $db = get_db();
 
             <!-- Success/Error alert banner -->
             <?php if (!empty($success_message)): ?>
-                <div class="error-message" style="display:flex; background: #ecfdf5; border-color: #a7f3d0; color: #065f46; margin-bottom: 1.5rem;">
+                <div class="toast-notification toast-success">
                     <i class="fa-solid fa-circle-check"></i>
                     <span><?php echo $success_message; ?></span>
                 </div>
             <?php endif; ?>
             <?php if (!empty($error_message)): ?>
-                <div class="error-message" style="display:flex; margin-bottom: 1.5rem;">
+                <div class="toast-notification toast-error">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <span><?php echo $error_message; ?></span>
                 </div>
@@ -215,47 +338,76 @@ $db = get_db();
             <!-- 0. DASHBOARD PAGE                            -->
             <!-- ============================================ -->
             <div id="tab-dashboard" class="app-view active">
-                <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Quick Access</h3>
+                <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Portal Summary</h3>
+                <?php
+                // Calculate summaries
+                // Leaves
+                $pending_leaves = 0;
+                $total_leaves = count($db['leaves'] ?? []);
+                foreach ($db['leaves'] ?? [] as $l) {
+                    if (($l['status'] ?? '') === 'Pending') $pending_leaves++;
+                }
+
+                // Assignments
+                $ungraded_submissions = 0;
+                $total_submissions = count($db['assignment_submissions'] ?? []);
+                foreach ($db['assignment_submissions'] ?? [] as $sub) {
+                    if (($sub['status'] ?? '') === 'submitted' || strtolower($sub['marks'] ?? '') === 'pending') {
+                        $ungraded_submissions++;
+                    }
+                }
+                
+                // Grievances
+                $active_grievances = 0;
+                foreach ($db['grievances'] ?? [] as $g) {
+                    if (($g['status'] ?? '') !== 'Resolved') {
+                        $active_grievances++;
+                    }
+                }
+                
+                // Notices
+                $total_notices = count($db['notices'] ?? []);
+                ?>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
                     
                     <!-- Leave Approvals Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[2])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-solid fa-envelope-open-text"></i>
                         </div>
-                        <h4 style="color: #10b981; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Leave Approvals</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Review and approve student leave requests.</p>
-                        <button onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[2])" style="width: 100%; background: transparent; border: 1px solid #86efac; color: #10b981; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Leave Approvals <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Leaves Pending</h4>
+                        <div style="color: #10b981; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $pending_leaves ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Out of <?= $total_leaves ?> total leaves</p>
                     </div>
 
                     <!-- Manage Assignments Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[3])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-solid fa-file-invoice"></i>
                         </div>
-                        <h4 style="color: #6366f1; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Manage Assignments</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Create assignments and grade submissions.</p>
-                        <button onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[3])" style="width: 100%; background: transparent; border: 1px solid #d8b4fe; color: #6366f1; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Assignments <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Ungraded Work</h4>
+                        <div style="color: #6366f1; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $ungraded_submissions ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Out of <?= $total_submissions ?> submissions</p>
                     </div>
 
                     <!-- Publish Notices Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[4])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #dbeafe; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-solid fa-bullhorn"></i>
                         </div>
-                        <h4 style="color: #3b82f6; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Publish Notices</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Post announcements and broadcast updates.</p>
-                        <button onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[4])" style="width: 100%; background: transparent; border: 1px solid #93c5fd; color: #3b82f6; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Notices <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Notices</h4>
+                        <div style="color: #3b82f6; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $total_notices ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Recent updates</p>
                     </div>
 
                     <!-- Grievance Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('grievances', document.querySelectorAll('.sidebar-nav-item')[5])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #ffedd5; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-solid fa-circle-exclamation"></i>
                         </div>
-                        <h4 style="color: #f97316; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Grievance</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View and resolve student complaints.</p>
-                        <button onclick="switchTab('grievances', document.querySelectorAll('.sidebar-nav-item')[5])" style="width: 100%; background: transparent; border: 1px solid #fdba74; color: #f97316; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Grievance <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Grievances</h4>
+                        <div style="color: #f97316; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $active_grievances ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Requires resolution</p>
                     </div>
 
                 </div>
@@ -357,7 +509,7 @@ $db = get_db();
                                                 $is_pdf = (strtolower($ext) === 'pdf');
                                             ?>
                                             <i class="fa-solid <?php echo $is_pdf?'fa-file-pdf':'fa-file-word'; ?>" style="font-size:1.15rem; color:<?php echo $is_pdf?'#ef4444':'#0284c7'; ?>"></i>
-                                            <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);">
+                                            <a href="<?php echo htmlspecialchars($leave['file']); ?>" target="_blank" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);">
                                                 <?php echo htmlspecialchars($leave['file']); ?>
                                             </a>
                                         </div>
@@ -418,7 +570,7 @@ $db = get_db();
                             </div>
                             <div style="flex: 1; min-width: 250px;">
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #334155;">Due Date</label>
-                                <input type="date" name="due_date" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit;">
+                                <input type="date" name="due_date" min="<?= date('Y-m-d') ?>" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit;">
                             </div>
                         </div>
                         
@@ -471,7 +623,7 @@ $db = get_db();
                             <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: #4f46e5; font-weight: 500;">
                                 <span><i class="fa-regular fa-calendar"></i> Due: <?= htmlspecialchars($a['due']) ?></span>
                                 <?php if (!empty($a['file'])): ?>
-                                    <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="color: #0284c7; text-decoration: none;"><i class="fa-solid fa-paperclip"></i> <?= htmlspecialchars($a['file']) ?></a>
+                                    <a href="<?= htmlspecialchars($a['file']) ?>" target="_blank" style="color: #0284c7; text-decoration: none;"><i class="fa-solid fa-paperclip"></i> <?= htmlspecialchars($a['file']) ?></a>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -496,7 +648,7 @@ $db = get_db();
                                     <td style="padding: 1rem 1.5rem; font-size: 0.9rem; color: #334155;"><?php echo htmlspecialchars($sub['student_id']); ?></td>
                                     <td style="padding: 1rem 1.5rem; font-size: 0.9rem; color: #334155;"><?php echo htmlspecialchars($sub['student_name']); ?></td>
                                     <td style="padding: 1rem 1.5rem; font-size: 0.9rem;">
-                                        <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #0284c7; font-weight: 500; text-decoration: none;">
+                                        <a href="<?php echo htmlspecialchars($sub['file']); ?>" target="_blank" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #0284c7; font-weight: 500; text-decoration: none;">
                                             <i class="fa-solid fa-paperclip" style="color: #0284c7; font-size: 1.1rem;"></i> View Document
                                         </a>
                                     </td>
@@ -530,28 +682,49 @@ $db = get_db();
             <!-- NOTICES TAB                                  -->
             <!-- ============================================ -->
             <div id="tab-notices" class="app-view">
-                <div class="settings-form-container" style="margin: 0 auto; max-width: 600px; padding: 2rem; background: white; border: 1px solid var(--border-color); border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h2 style="font-size: 2.25rem; color: #3b82f6; font-weight: 800; margin-bottom: 0.5rem;">Publish Notice</h2>
+                    <p style="color: var(--text-muted);">Post announcements and broadcast updates to everyone.</p>
+                </div>
+                
+                <div style="background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; margin-bottom: 3rem; box-shadow: var(--box-shadow-subtle);">
                     <form method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="publish_notice">
-                        <h3 style="margin-bottom:1.5rem; color: #111827;">Publish New Notice</h3>
-                        <div class="form-group-col" style="margin-bottom:1rem;">
-                            <label>Title</label>
-                            <input type="text" name="title" required placeholder="e.g. Extra Class Scheduled" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #334155;">Notice Title</label>
+                            <input type="text" name="title" required placeholder="e.g. Extra Class Scheduled" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 1rem;">
                         </div>
-                        <div class="form-group-col" style="margin-bottom:1rem;">
-                            <label>Description</label>
-                            <textarea name="desc" rows="4" required placeholder="Enter notice details..." style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; font-family: inherit;"></textarea>
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #334155;">Description</label>
+                            <textarea name="desc" rows="4" required placeholder="Enter notice details..." style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 1rem; resize: vertical;"></textarea>
                         </div>
-                        <div class="form-group-col" style="margin-bottom:1rem;">
-                            <label>Expiry Date</label>
-                            <input type="date" name="expiry" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #334155;">Expiry Date (Optional)</label>
+                            <input type="date" name="expiry" min="<?= date('Y-m-d') ?>" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 1rem;">
                         </div>
-                        <div class="form-group-col" style="margin-bottom:1.5rem;">
-                            <label>Attachment (Optional)</label>
-                            <input type="file" name="attachment" style="padding:0.5rem 0;">
+                        
+                        <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 2rem; background: #f8fafc; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                                <div style="width: 56px; height: 56px; background: #dbeafe; color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                </div>
+                                <div style="text-align: left;">
+                                    <h4 style="font-weight: 600; margin-bottom: 0.25rem; font-size: 1.05rem; color: #1e293b;">Attach File (Optional)</h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted);">Click here to <label for="notice-file-upload" style="color: #3b82f6; font-weight: 600; cursor: pointer;">browse</label> and select a file</p>
+                                    <input id="notice-file-upload" type="file" name="attachment" style="display: none;">
+                                    <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.35rem;">Supported formats: PDF, DOCX, JPG, PNG (Max 5MB)</p>
+                                </div>
+                            </div>
+                            <label for="notice-file-upload" style="background: white; border: 1px solid var(--border-color); padding: 0.65rem 1.25rem; border-radius: 6px; color: #3b82f6; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background 0.2s;">
+                                <i class="fa-solid fa-arrow-up-from-bracket"></i> Choose File
+                            </label>
                         </div>
-                        <div style="display:flex; justify-content:flex-end;">
-                            <button type="submit" class="btn-hod-action" style="background:var(--primary-color);color:white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">Publish Notice</button>
+                        
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="submit" style="background: #3b82f6; color: white; border: none; padding: 0.85rem 1.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 1rem; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); transition: transform 0.2s, box-shadow 0.2s;">Publish Notice</button>
                         </div>
                     </form>
                 </div>
@@ -571,7 +744,7 @@ $db = get_db();
                                 <span><i class="fa-regular fa-calendar" style="color: #64748b;"></i> Published: <?= htmlspecialchars($n['date']) ?></span>
                                 <span><i class="fa-regular fa-clock" style="color: #64748b;"></i> Expiry: <?= htmlspecialchars($n['expiry'] ?: 'N/A') ?></span>
                                 <?php if (!empty($n['attachment'])): ?>
-                                    <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="color: #0284c7; text-decoration: none;"><i class="fa-solid fa-paperclip"></i> <?= htmlspecialchars($n['attachment']) ?></a>
+                                    <a href="<?= htmlspecialchars($n['attachment']) ?>" target="_blank" style="color: #0284c7; text-decoration: none;"><i class="fa-solid fa-paperclip"></i> <?= htmlspecialchars($n['attachment']) ?></a>
                                 <?php endif; ?>
                             </div>
                         </div>

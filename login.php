@@ -137,7 +137,7 @@ switch ($role) {
                         </label>
                         <div class="input-wrapper">
                             <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus
-                                   value="<?php echo ($role === 'student') ? '125UIT1080' : (($role === 'faculty') ? 'faculty1' : ''); ?>">
+                                   value="<?php echo ($role === 'student') ? '125UIT1080' : (($role === 'faculty') ? 'faculty1' : (($role === 'hod') ? 'hod1' : (($role === 'admin') ? 'admin1' : ''))); ?>">
                         </div>
                     </div>
 
@@ -148,8 +148,8 @@ switch ($role) {
                             <span>Password</span>
                         </label>
                         <div class="input-wrapper">
-                            <input type="password" id="password" name="password" placeholder="Enter your password" required
-                                   value="12345678">
+                             <input type="password" id="password" name="password" placeholder="Enter your password" required
+                                    value="<?php echo ($role === 'admin') ? '12345' : '12345678'; ?>">
                             <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
                                 <i class="fa-regular fa-eye" id="passwordToggleIcon"></i>
                             </button>

@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Kolkata');
 // Prevent direct access to db.php
 if (basename($_SERVER['PHP_SELF']) == 'db.php') {
     header("HTTP/1.1 403 Forbidden");
@@ -10,19 +11,7 @@ define('DB_FILE', __DIR__ . '/database.json');
 function init_db() {
     if (!file_exists(DB_FILE)) {
         $default_data = [
-            'notices' => [
-                [
-                    'id' => 1,
-                    'title' => 'Internal Exam Schedule',
-                    'desc' => 'Internal examinations will be held from 20th July 2026. Please check the timetable.',
-                    'author' => 'Prof. Rajesh Sharma',
-                    'role' => 'Faculty',
-                    'date' => '15 Jul 2026 10:30 AM',
-                    'attachment' => 'schedule.pdf',
-                    'size' => '245 KB',
-                    'expiry' => '2026-08-01'
-                ]
-            ],
+            'notices' => [],
             'assignments' => [
                 [
                     'id' => 1,
@@ -307,6 +296,22 @@ function init_db() {
                 'notifications_enabled' => true,
                 'captcha_enabled' => true,
                 'maintenance_mode' => false
+            ],
+            'departments' => [
+                [
+                    'id' => 'dept_1',
+                    'name' => 'Information Technology',
+                    'code' => 'IT-ENGG',
+                    'intake' => 120,
+                    'hod_name' => 'Prof. Amit Deshmukh'
+                ],
+                [
+                    'id' => 'dept_2',
+                    'name' => 'Computer Engineering',
+                    'code' => 'CE-ENGG',
+                    'intake' => 180,
+                    'hod_name' => 'Dr. Neha Sharma'
+                ]
             ]
         ];
         file_put_contents(DB_FILE, json_encode($default_data, JSON_PRETTY_PRINT));
@@ -459,6 +464,22 @@ function get_db() {
             'notifications_enabled' => true,
             'captcha_enabled' => true,
             'maintenance_mode' => false
+        ],
+        'departments' => [
+            [
+                'id' => 'dept_1',
+                'name' => 'Information Technology',
+                'code' => 'IT-ENGG',
+                'intake' => 120,
+                'hod_name' => 'Prof. Amit Deshmukh'
+            ],
+            [
+                'id' => 'dept_2',
+                'name' => 'Computer Engineering',
+                'code' => 'CE-ENGG',
+                'intake' => 180,
+                'hod_name' => 'Dr. Neha Sharma'
+            ]
         ]
     ];
     
@@ -506,6 +527,42 @@ function get_db() {
                 $updated = true;
             }
         }
+    }
+    
+    // Automatically remove expired items across the portal
+    $current_time = time();
+    $orig_notices = isset($data['notices']) ? count($data['notices']) : 0;
+    $orig_leaves = isset($data['leaves']) ? count($data['leaves']) : 0;
+    $orig_assignments = isset($data['assignments']) ? count($data['assignments']) : 0;
+
+    if (isset($data['notices'])) {
+        $data['notices'] = array_values(array_filter($data['notices'], function($n) use ($current_time) {
+            if (empty($n['expiry'])) return true;
+            $exp = strtotime($n['expiry'] . ' 23:59:59');
+            return $exp === false || $exp >= $current_time;
+        }));
+    }
+
+    if (isset($data['leaves'])) {
+        $data['leaves'] = array_values(array_filter($data['leaves'], function($l) use ($current_time) {
+            if (empty($l['to'])) return true;
+            $exp = strtotime($l['to'] . ' 23:59:59');
+            return $exp === false || $exp >= $current_time;
+        }));
+    }
+
+    if (isset($data['assignments'])) {
+        $data['assignments'] = array_values(array_filter($data['assignments'], function($a) use ($current_time) {
+            if (empty($a['due'])) return true;
+            $exp = strtotime($a['due']);
+            return $exp === false || $exp >= $current_time;
+        }));
+    }
+
+    if ($orig_notices !== count($data['notices'] ?? []) ||
+        $orig_leaves !== count($data['leaves'] ?? []) ||
+        $orig_assignments !== count($data['assignments'] ?? [])) {
+        $updated = true;
     }
     
     if ($updated) {

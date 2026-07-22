@@ -12,8 +12,23 @@ $user = $_SESSION['user'];
 $student_id = $user['id'];
 $db = get_db();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clear_notifications') {
+    $db['recent_activity'] = [];
+    save_db($db);
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 $success_message = '';
 $error_message = '';
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    unset($_SESSION['success_message']);
+}
+if (isset($_SESSION['error_message'])) {
+    $error_message = $_SESSION['error_message'];
+    unset($_SESSION['error_message']);
+}
 
 // Handle POST submissions (Leave applications or Assignment uploads)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle uploaded file if present
         if (isset($_FILES['leave_file']) && $_FILES['leave_file']['error'] === UPLOAD_ERR_OK) {
             $file_name = basename($_FILES['leave_file']['name']);
+            if (!is_dir(__DIR__ . '/uploads')) { mkdir(__DIR__ . '/uploads', 0777, true); }
+            move_uploaded_file($_FILES['leave_file']['tmp_name'], __DIR__ . '/uploads/' . $file_name);
+            $file_name = 'uploads/' . $file_name;
         } elseif (isset($_POST['file_name']) && !empty($_POST['file_name'])) {
             $file_name = trim($_POST['file_name']);
         }
@@ -51,10 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]
             ], array_slice($db['recent_activity'], 0, 3));
             save_db($db);
-            $success_message = 'Leave application submitted successfully! It has been routed to the Faculty Dashboard for approval.';
+            $_SESSION['success_message'] = 'Leave application submitted successfully! It has been routed to the Faculty Dashboard for approval.';
         } else {
-            $error_message = 'Please fill out all leave application fields.';
+            $_SESSION['error_message'] = 'Please fill out all leave application fields.';
         }
+        header("Location: student_dashboard.php");
+        exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'upload_assignment') {
         $unit = intval($_POST['unit']);
         $file_name = 'Assignment_Unit_' . $unit . '.pdf';
@@ -94,7 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         save_db($db);
-        $success_message = 'Assignment for Unit ' . $unit . ' submitted successfully!';
+        $_SESSION['success_message'] = 'Assignment for Unit ' . $unit . ' submitted successfully!';
+        header("Location: student_dashboard.php");
+        exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'submit_grievance') {
         $title = trim($_POST['title']);
         $category = trim($_POST['category']);
@@ -123,10 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ], array_slice($db['recent_activity'], 0, 3));
             
             save_db($db);
-            $success_message = 'Grievance submitted successfully!';
+            $_SESSION['success_message'] = 'Grievance submitted successfully!';
         } else {
-            $error_message = 'Please fill out all grievance fields.';
+            $_SESSION['error_message'] = 'Please fill out all grievance fields.';
         }
+        header("Location: student_dashboard.php");
+        exit;
     }
 }
 
@@ -185,8 +209,106 @@ foreach ($db['leaves'] ?? [] as $leave) {
                     <p id="currentTabSubtitle">Quick access to all essential student services.</p>
                 </div>
                 <div class="user-profile-widget">
-                    <div class="notification-bell" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#3b82f6'});">
-                        <i class="fa-regular fa-bell"></i>
+                    <div class="notification-wrapper" style="position: relative;">
+                        <div class="notification-bell" id="notificationToggle" style="cursor:pointer;">
+                            <i class="fa-regular fa-bell"></i>
+                            <?php if (!empty($db['recent_activity'])): ?>
+                            <span class="badge" style="position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; font-weight: bold;"><?php echo min(count($db['recent_activity']), 9); ?></span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="notification-dropdown" id="notificationDropdown" style="display: none; position: absolute; top: 120%; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color); z-index: 100; overflow: hidden; cursor: default;">
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+                                <h4 style="margin: 0; font-size: 1rem; color: #1e293b;">Notifications</h4>
+                                <span style="font-size: 0.75rem; color: var(--primary-color); cursor: pointer; font-weight: 600;" onclick="fetch(window.location.href, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'action=clear_notifications'}).then(() => { this.parentElement.nextElementSibling.innerHTML='<div style=\'padding: 2rem 1rem; text-align: center; color: #64748b; font-size: 0.9rem;\'><i class=\'fa-regular fa-bell-slash\' style=\'font-size: 1.5rem; margin-bottom: 0.5rem; color: #cbd5e1;\'></i><br>No new notifications</div>'; let b = document.querySelector('#notificationToggle .badge'); if(b) b.style.display='none'; });">Mark all as read</span>
+                            </div>
+                            <div style="max-height: 350px; overflow-y: auto; text-align: left;">
+                                <?php if (empty($db['recent_activity'])): ?>
+                                    <div style="padding: 2rem 1rem; text-align: center; color: #64748b; font-size: 0.9rem;">
+                                        <i class="fa-regular fa-bell-slash" style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #cbd5e1;"></i><br>
+                                        No new notifications
+                                    </div>
+                                <?php else: ?>
+                                    <?php foreach(array_slice($db['recent_activity'], 0, 5) as $idx => $activity): ?>
+                                    <?php
+                                    $targetTab = 'dashboard';
+                                    $t = strtolower($activity['title'] ?? '');
+                                    if (strpos($t, 'leave') !== false) $targetTab = 'leaves';
+                                    elseif (strpos($t, 'grievance') !== false) $targetTab = 'grievance';
+                                    elseif (strpos($t, 'assignment') !== false) $targetTab = 'assignments';
+                                    elseif (strpos($t, 'notice') !== false) $targetTab = 'notices';
+                                    ?>
+                                    <div onclick="triggerTab('<?php echo $targetTab; ?>')" style="padding: 1rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s; <?php echo $idx === 0 ? 'background: #f0f9ff;' : ''; ?>" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='<?php echo $idx === 0 ? '#f0f9ff' : 'transparent'; ?>'">
+                                        <div style="display: flex; gap: 0.75rem;">
+                                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                <i class="fa-solid fa-bolt"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600; font-size: 0.9rem; color: #334155; margin-bottom: 0.15rem;"><?php echo htmlspecialchars($activity['title'] ?? 'Notification'); ?></div>
+                                                <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.25rem;"><?php echo htmlspecialchars($activity['desc'] ?? ''); ?></div>
+                                                <div style="font-size: 0.7rem; color: #94a3b8;"><i class="fa-regular fa-clock" style="margin-right: 3px;"></i> <?php echo htmlspecialchars($activity['time'] ?? 'Just now'); ?></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+
+                        </div>
+                        <script>
+                            function triggerTab(tabName) {
+                                if (!tabName) return;
+                                if (tabName === 'grievance') {
+                                    let hasGrievances = false;
+                                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                                        if ((el.getAttribute('onclick')||'').includes("'grievances'") || el.getAttribute('data-tab') === 'grievances') hasGrievances = true;
+                                    });
+                                    if (hasGrievances) tabName = 'grievances';
+                                }
+                                if (tabName === 'grievances') {
+                                    let hasGrievance = false;
+                                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                                        if ((el.getAttribute('onclick')||'').includes("'grievance'") && !(el.getAttribute('onclick')||'').includes("'grievances'")) hasGrievance = true;
+                                        if (el.getAttribute('data-tab') === 'grievance') hasGrievance = true;
+                                    });
+                                    if (hasGrievance) tabName = 'grievance';
+                                }
+                                
+                                document.getElementById('notificationDropdown').style.display = 'none';
+                                
+                                let items = document.querySelectorAll('.sidebar-nav-item');
+                                let targetEl = null;
+                                for (let i=0; i<items.length; i++) {
+                                    let onclick = items[i].getAttribute('onclick') || '';
+                                    let dataTab = items[i].getAttribute('data-tab') || '';
+                                    if (onclick.includes("'" + tabName + "'") || dataTab === tabName) {
+                                        targetEl = items[i];
+                                        break;
+                                    }
+                                }
+                                
+                                if (typeof switchTab === 'function') {
+                                    if (targetEl && switchTab.length === 2) {
+                                        switchTab(tabName, targetEl);
+                                    } else {
+                                        try { switchTab(tabName); } catch(e) {}
+                                    }
+                                }
+                            }
+
+                            document.getElementById('notificationToggle').addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                var dropdown = document.getElementById('notificationDropdown');
+                                dropdown.style.display = dropdown.style.display === 'none' || dropdown.style.display === '' ? 'block' : 'none';
+                            });
+                            document.addEventListener('click', function(e) {
+                                var dropdown = document.getElementById('notificationDropdown');
+                                var toggle = document.getElementById('notificationToggle');
+                                if (dropdown && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                                    dropdown.style.display = 'none';
+                                }
+                            });
+                        </script>
                     </div>
                     <div class="user-avatar-box">
                         <div class="user-details">
@@ -199,13 +321,13 @@ foreach ($db['leaves'] ?? [] as $leave) {
 
             <!-- Success/Error alert banner -->
             <?php if (!empty($success_message)): ?>
-                <div class="error-message" style="display:flex; background: #ecfdf5; border-color: #a7f3d0; color: #065f46; margin-bottom: 1.5rem;">
+                <div class="toast-notification toast-success">
                     <i class="fa-solid fa-circle-check"></i>
                     <span><?php echo $success_message; ?></span>
                 </div>
             <?php endif; ?>
             <?php if (!empty($error_message)): ?>
-                <div class="error-message" style="display:flex; margin-bottom: 1.5rem;">
+                <div class="toast-notification toast-error">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <span><?php echo $error_message; ?></span>
                 </div>
@@ -215,47 +337,84 @@ foreach ($db['leaves'] ?? [] as $leave) {
             <!-- 0. DASHBOARD PAGE                            -->
             <!-- ============================================ -->
             <div id="tab-dashboard" class="app-view active">
-                <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Quick Access</h3>
+                <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Portal Summary</h3>
+                <?php
+                // Calculate summaries
+                $student_name = $user['name'] ?? 'Prasad Kulkarni';
+                
+                // Assignments
+                $total_assignments = count($db['assignments'] ?? []);
+                $submitted_assignments = 0;
+                foreach ($db['assignment_submissions'] ?? [] as $sub) {
+                    if (($sub['student_name'] ?? '') === $student_name) {
+                        $submitted_assignments++;
+                    }
+                }
+                $pending_assignments = max(0, $total_assignments - $submitted_assignments);
+                
+                // Leaves
+                $my_leaves = 0;
+                $pending_leaves = 0;
+                foreach ($db['leaves'] ?? [] as $l) {
+                    if (($l['applicant_name'] ?? '') === $student_name) {
+                        $my_leaves++;
+                        if (($l['status'] ?? '') === 'Pending') $pending_leaves++;
+                    }
+                }
+                
+                // Grievances
+                $active_grievances = 0;
+                foreach ($db['grievances'] ?? [] as $g) {
+                    if (($g['student_name'] ?? '') === $student_name) {
+                        if (($g['status'] ?? '') !== 'Resolved') {
+                            $active_grievances++;
+                        }
+                    }
+                }
+                
+                // Notices
+                $total_notices = count($db['notices'] ?? []);
+                ?>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
                     
-                    <!-- Assignments Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Assignments Summary Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[2])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-solid fa-clipboard-list"></i>
                         </div>
-                        <h4 style="color: #6366f1; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Assignments</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View your assignments and submit your work.</p>
-                        <button onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[2])" style="width: 100%; background: transparent; border: 1px solid #d8b4fe; color: #6366f1; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Assignments <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Pending Assignments</h4>
+                        <div style="color: #6366f1; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $pending_assignments ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Out of <?= $total_assignments ?> total</p>
                     </div>
 
-                    <!-- Leave Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Leaves Summary Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[3])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-regular fa-calendar-check"></i>
                         </div>
-                        <h4 style="color: #10b981; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Leave</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Apply for leave and check your leave status.</p>
-                        <button onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[3])" style="width: 100%; background: transparent; border: 1px solid #86efac; color: #10b981; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Leave <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Leaves Pending</h4>
+                        <div style="color: #10b981; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $pending_leaves ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Total Applied: <?= $my_leaves ?></p>
                     </div>
 
-                    <!-- Grievance Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Grievance Summary Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('grievance', document.querySelectorAll('.sidebar-nav-item')[4])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #ffedd5; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-regular fa-comments"></i>
                         </div>
-                        <h4 style="color: #f97316; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Grievance</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">Raise a grievance and track its resolution.</p>
-                        <button onclick="switchTab('grievance', document.querySelectorAll('.sidebar-nav-item')[4])" style="width: 100%; background: transparent; border: 1px solid #fdba74; color: #f97316; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Grievance <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Grievances</h4>
+                        <div style="color: #f97316; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $active_grievances ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Requires resolution</p>
                     </div>
 
-                    <!-- Notice Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Notice Summary Card -->
+                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[5])">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: #dbeafe; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
                             <i class="fa-regular fa-bell"></i>
                         </div>
-                        <h4 style="color: #3b82f6; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Notice</h4>
-                        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; flex-grow: 1;">View all the important notices and updates.</p>
-                        <button onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[5])" style="width: 100%; background: transparent; border: 1px solid #93c5fd; color: #3b82f6; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Go to Notice <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i></button>
+                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Notices</h4>
+                        <div style="color: #3b82f6; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $total_notices ?></div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Recent updates</p>
                     </div>
 
                 </div>
@@ -320,11 +479,11 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                                 $ext = pathinfo($notice['attachment'], PATHINFO_EXTENSION); 
                                                 $badge_class = ($ext === 'pdf') ? 'pdf' : 'docx';
                                             ?>
-                                            <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="attachment-badge <?php echo $badge_class; ?>">
+                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" target="_blank" class="attachment-badge <?php echo $badge_class; ?>">
                                                 <i class="fa-regular <?php echo ($badge_class==='pdf')?'fa-file-pdf':'fa-file-word'; ?>"></i>
                                                 <span><?php echo htmlspecialchars($notice['attachment']); ?> (<?php echo $notice['size']; ?>)</span>
                                             </a>
-                                            <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;">
+                                            <a href="<?php echo htmlspecialchars($notice['attachment']); ?>" target="_blank" class="btn-icon-download" style="margin-left: 0.5rem; text-decoration: none;">
                                                 <i class="fa-solid fa-download"></i>
                                             </a>
                                         <?php else: ?>
@@ -380,7 +539,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                                 <div style="font-weight: 700; color: #1e293b; font-size: 1rem; margin-bottom: 0.25rem;">Unit <?php echo $assign['unit']; ?> - <?php echo htmlspecialchars($assign['title']); ?></div>
                                                 <div style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.25rem;"><?php echo htmlspecialchars($assign['desc']); ?></div>
                                                 <?php if (!empty($assign['file'])): ?>
-                                                    <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="font-size: 0.8rem; color: #4f46e5; text-decoration: none; display: inline-block;"><i class="fa-solid fa-paperclip"></i> Question Document</a>
+                                                    <a href="<?php echo htmlspecialchars($assign['file']); ?>" target="_blank" style="font-size: 0.8rem; color: #4f46e5; text-decoration: none; display: inline-block;"><i class="fa-solid fa-paperclip"></i> Question Document</a>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
@@ -405,7 +564,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                         <?php if ($status === 'graded' || $status === 'submitted'): ?>
                                             <div style="display: inline-flex; align-items: center; gap: 0.5rem; color: #10b981; font-weight: 600;">
                                                 <i class="fa-solid fa-circle-check"></i>
-                                                <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" style="color: #10b981; text-decoration: none;" title="<?php echo htmlspecialchars($file); ?>">Submitted</a>
+                                                <a href="<?php echo htmlspecialchars($file); ?>" target="_blank" style="color: #10b981; text-decoration: none;" title="<?php echo htmlspecialchars($file); ?>">Submitted</a>
                                             </div>
                                         <?php else: ?>
                                             <button onclick="openUploadModal(<?php echo $assign['unit']; ?>, '<?php echo htmlspecialchars($assign['title']); ?>')" style="background: white; border: 1.5px solid #d8b4fe; color: #8b5cf6; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
@@ -478,13 +637,13 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 <div class="form-group">
                                     <label for="leaveFromDate"><i class="fa-regular fa-calendar-days"></i> From Date</label>
                                     <div class="input-wrapper">
-                                        <input type="date" id="leaveFromDate" name="from_date" required>
+                                        <input type="date" id="leaveFromDate" name="from_date" min="<?php echo date('Y-m-d'); ?>" required>
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label for="leaveToDate"><i class="fa-regular fa-calendar-days"></i> To Date</label>
                                     <div class="input-wrapper">
-                                        <input type="date" id="leaveToDate" name="to_date" required>
+                                        <input type="date" id="leaveToDate" name="to_date" min="<?php echo date('Y-m-d'); ?>" required>
                                     </div>
                                 </div>
                             </div>
@@ -523,7 +682,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                                     $is_pdf = (strtolower($ext) === 'pdf');
                                                 ?>
                                                 <i class="fa-solid <?php echo $is_pdf?'fa-file-pdf':'fa-file-word'; ?>" style="font-size:1.15rem; color:<?php echo $is_pdf?'#ef4444':'#0284c7'; ?>"></i>
-                                                <a href="#" onclick="Swal.fire({title: 'Build in progress', text: 'This feature is currently under construction.', icon: 'info', confirmButtonColor: '#8b5cf6'}); return false;" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);"><?php echo htmlspecialchars($leave['file']); ?></a>
+                                                <a href="<?php echo htmlspecialchars($leave['file']); ?>" target="_blank" class="pub-name" style="font-size:0.9rem; font-weight:500; text-decoration:none; color: var(--primary-color);"><?php echo htmlspecialchars($leave['file']); ?></a>
                                             </div>
                                         </td>
                                         <td>

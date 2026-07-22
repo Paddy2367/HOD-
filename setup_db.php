@@ -65,6 +65,7 @@ try {
 
     // Insert Default Users
     $password = password_hash('12345678', PASSWORD_DEFAULT);
+    $admin_password = password_hash('12345', PASSWORD_DEFAULT);
     
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM users");
     $stmt->execute();
@@ -73,7 +74,7 @@ try {
             ['125UIT1080', $password, 'Prasad Kulkarni', 'student', 'IT - Div A (A2)', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop'],
             ['faculty1', $password, 'Prof. Rajesh Sharma', 'faculty', 'IT Department', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop'],
             ['hod1', $password, 'Prof. Amit Deshmukh', 'hod', 'IT Department Head', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=150&auto=format&fit=crop'],
-            ['admin1', $password, 'System Admin', 'admin', 'Administration', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop']
+            ['admin1', $admin_password, 'System Admin', 'admin', 'Administration', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop']
         ];
         
         $insert_user = $pdo->prepare("INSERT INTO users (username, password_hash, name, role, dept, avatar) VALUES (?, ?, ?, ?, ?, ?)");
@@ -118,6 +119,10 @@ try {
         echo "<p>Sample leaves inserted.</p>";
 
     } else {
+        // Update admin1 password if database is already seeded
+        $update_admin = $pdo->prepare("UPDATE users SET password_hash = ? WHERE username = 'admin1'");
+        $update_admin->execute([$admin_password]);
+        echo "<p>Admin password updated to '12345'.</p>";
         echo "<p>Users already exist. Skipping seed data.</p>";
     }
 

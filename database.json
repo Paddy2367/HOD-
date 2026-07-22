@@ -2,35 +2,13 @@
     "notices": [
         {
             "id": 1,
-            "title": "Internal Exam Schedule",
-            "desc": "Internal examinations will be held from 20th July 2026. Please check the timetable.",
-            "author": "Prof. Rajesh Sharma",
-            "role": "Faculty",
-            "date": "15 Jul 2026 10:30 AM",
-            "attachment": "schedule.pdf",
-            "size": "245 KB",
-            "expiry": "2026-08-01"
-        },
-        {
-            "id": 2,
-            "title": "EXAMS",
-            "desc": "EXAMS",
-            "author": "Prof. Amit Deshmukh",
-            "role": "Head of Department",
-            "date": "20 Jul 2026",
-            "expiry": "2026-07-21",
-            "attachment": "ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
-            "size": "1.5MB"
-        },
-        {
-            "id": 3,
             "title": "CHECK",
             "desc": "CHECK",
-            "author": "Prof. Amit Deshmukh",
-            "role": "Head of Department",
-            "date": "20 Jul 2026",
-            "expiry": "2026-07-21",
-            "attachment": "ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
+            "author": "Prof. Rajesh Sharma",
+            "role": "Faculty (IT Department)",
+            "date": "23 Jul 2026",
+            "expiry": "2026-07-23",
+            "attachment": "uploads\/ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
             "size": "1.5MB"
         }
     ],
@@ -122,6 +100,28 @@
             "file": "uploads\/login_illustration.png",
             "marks": "Pending",
             "created_by": "Prof. Rajesh Sharma"
+        },
+        {
+            "id": 9,
+            "unit": 9,
+            "title": "SOHAM",
+            "desc": "Complete the assignment as per instructions.",
+            "due": "22 Jul 2026 11:59 AMM",
+            "status": "pending",
+            "file": "uploads\/ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
+            "marks": "Pending",
+            "created_by": "Prof. Rajesh Sharma"
+        },
+        {
+            "id": 10,
+            "unit": 10,
+            "title": "check",
+            "desc": "Complete the assignment as per instructions.",
+            "due": "23 Jul 2026 11:59 AMM",
+            "status": "pending",
+            "file": "uploads\/ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
+            "marks": "Pending",
+            "created_by": "Prof. Rajesh Sharma"
         }
     ],
     "assignment_submissions": [
@@ -196,86 +196,18 @@
             "file": "uploads\/login_illustration.png",
             "status": "submitted",
             "marks": "Pending"
+        },
+        {
+            "id": 9,
+            "assignment_unit": 9,
+            "student_id": 1,
+            "student_name": "Prasad Kulkarni",
+            "file": "uploads\/ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
+            "status": "graded",
+            "marks": "6 \/ 10"
         }
     ],
     "leaves": [
-        {
-            "id": 1,
-            "applicant_name": "Prasad Kulkarni",
-            "applicant_role": "Student",
-            "file": "Leave_Form_15_Jan_2026.pdf",
-            "reason": "Medical",
-            "from": "15 Jan 2026",
-            "to": "17 Jan 2026",
-            "status": "Approved",
-            "remarks": "Approved based on medical certificate."
-        },
-        {
-            "id": 2,
-            "applicant_name": "Prasad Kulkarni",
-            "applicant_role": "Student",
-            "file": "Leave_Form_02_Feb_2026.docx",
-            "reason": "Personal",
-            "from": "02 Feb 2026",
-            "to": "03 Feb 2026",
-            "status": "Approved",
-            "remarks": "Approved. Cover back missed tasks."
-        },
-        {
-            "id": 3,
-            "applicant_name": "Prof. Rajesh Sharma",
-            "applicant_role": "Faculty",
-            "file": "Leave_Form_10_Mar_2026.pdf",
-            "reason": "Family Function",
-            "from": "10 Mar 2026",
-            "to": "11 Mar 2026",
-            "status": "Approved",
-            "remarks": "Arranged backup classes."
-        },
-        {
-            "id": 4,
-            "applicant_name": "Prasad Kulkarni",
-            "applicant_role": "Student",
-            "file": "Leave_Form_21_Apr_2026.docx",
-            "reason": "Medical",
-            "from": "21 Apr 2026",
-            "to": "23 Apr 2026",
-            "status": "Rejected",
-            "remarks": "Rejected. No active medical report found."
-        },
-        {
-            "id": 5,
-            "applicant_name": "Prof. Neha Patil",
-            "applicant_role": "Faculty",
-            "file": "Leave_Form_05_May_2026.pdf",
-            "reason": "Medical",
-            "from": "05 May 2026",
-            "to": "07 May 2026",
-            "status": "Approved",
-            "remarks": ""
-        },
-        {
-            "id": 6,
-            "applicant_name": "Prasad Kulkarni",
-            "applicant_role": "Student",
-            "file": "ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
-            "reason": "Family Function",
-            "from": "2026-07-20",
-            "to": "2026-07-22",
-            "status": "Approved",
-            "remarks": ""
-        },
-        {
-            "id": 7,
-            "applicant_name": "Prasad Kulkarni",
-            "applicant_role": "Student",
-            "file": "ChatGPT Image Jul 16, 2026, 02_56_16 PM.png",
-            "reason": "Family Function",
-            "from": "2026-07-20",
-            "to": "2026-07-20",
-            "status": "Approved",
-            "remarks": ""
-        },
         {
             "id": 8,
             "applicant_name": "Prasad Kulkarni",
@@ -296,6 +228,28 @@
             "from": "2026-07-29",
             "to": "2026-07-30",
             "status": "Approved",
+            "remarks": ""
+        },
+        {
+            "id": 4,
+            "applicant_name": "Prasad Kulkarni",
+            "applicant_role": "Student",
+            "file": "ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
+            "reason": "Medical",
+            "from": "2026-07-23",
+            "to": "2026-07-24",
+            "status": "Pending",
+            "remarks": ""
+        },
+        {
+            "id": 5,
+            "applicant_name": "Prasad Kulkarni",
+            "applicant_role": "Student",
+            "file": "uploads\/ChatGPT Image Jul 16, 2026, 02_56_51 PM.png",
+            "reason": "Exam Preparation",
+            "from": "2026-07-23",
+            "to": "2026-07-23",
+            "status": "Pending",
             "remarks": ""
         }
     ],
@@ -335,6 +289,30 @@
             "attendance": "72%",
             "status": "Active",
             "avatar": "https:\/\/images.unsplash.com\/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop"
+        },
+        {
+            "id": "125UIT6080",
+            "username": "tusharsonar95",
+            "name": "Tushar Sonar",
+            "email": "tushar@gmail.com",
+            "phone": "9999999999",
+            "dept": "IT - Div A (A1)",
+            "semester": "1st Semester",
+            "attendance": "100%",
+            "status": "Active",
+            "avatar": "https:\/\/ui-avatars.com\/api\/?name=Tushar+Sonar&background=random"
+        },
+        {
+            "id": "125UIT6562",
+            "username": "ajay91",
+            "name": "Ajay",
+            "email": "ajay@gmail.com",
+            "phone": "9876543210",
+            "dept": "IT - Div A (A1)",
+            "semester": "1st Semester",
+            "attendance": "100%",
+            "status": "Active",
+            "avatar": "https:\/\/ui-avatars.com\/api\/?name=Ajay&background=random"
         }
     ],
     "faculty": [
@@ -409,6 +387,12 @@
                     "role": "Head of Department",
                     "date": "19 Jul 2026 09:09 PM",
                     "message": "In progress"
+                },
+                {
+                    "author": "Prof. Amit Deshmukh",
+                    "role": "Head of Department",
+                    "date": "22 Jul 2026 08:31 PM",
+                    "message": "ALRIGHT"
                 }
             ]
         },
@@ -421,31 +405,23 @@
             "desc": "XYZ",
             "date": "20 Jul 2026 10:40 AM",
             "status": "Pending",
-            "replies": []
+            "replies": [
+                {
+                    "author": "Prof. Amit Deshmukh",
+                    "role": "Head of Department",
+                    "date": "22 Jul 2026 08:30 PM",
+                    "message": "ABC"
+                },
+                {
+                    "author": "Prof. Amit Deshmukh",
+                    "role": "Head of Department",
+                    "date": "22 Jul 2026 08:31 PM",
+                    "message": "OKK"
+                }
+            ]
         }
     ],
-    "recent_activity": [
-        {
-            "title": "Grievance Raised",
-            "desc": "Prasad Kulkarni reported \"CLASSROOM FACILITES\"",
-            "time": "Just now"
-        },
-        {
-            "title": "New Leave Application",
-            "desc": "Prasad Kulkarni applied for Personal Leave",
-            "time": "Just now"
-        },
-        {
-            "title": "New Leave Application",
-            "desc": "Prasad Kulkarni applied for Personal Leave",
-            "time": "Just now"
-        },
-        {
-            "title": "New Leave Application",
-            "desc": "Prasad Kulkarni applied for Family Function Leave",
-            "time": "Just now"
-        }
-    ],
+    "recent_activity": [],
     "settings": {
         "dept_name": "Information Technology",
         "dept_code": "IT-ENGG",
@@ -455,6 +431,70 @@
         "hod_phone": "+91 93344 55667",
         "notifications_enabled": true,
         "captcha_enabled": true,
-        "maintenance_mode": false
-    }
+        "maintenance_mode": false,
+        "site_name": "ABC College",
+        "academic_year": "2025-26",
+        "default_timezone": "(GMT+05:30) Asia\/Kolkata",
+        "date_format": "DD-MM-YYYY",
+        "session_timeout": "30",
+        "email_from": "no-reply@abccollege.edu.in",
+        "address": "123 College Road, Kolkata, West Bengal, 700001",
+        "phone": "+91 98765 43210",
+        "website": "www.abccollege.edu.in",
+        "established_year": "2001",
+        "current_semester": "Even Semester",
+        "total_departments": "12 Departments",
+        "total_courses": "36 Courses",
+        "sections_divisions": "18 Sections",
+        "grading_system": "CGPA",
+        "total_users": "9",
+        "admin_users": "1",
+        "faculty_users": "3",
+        "student_users": "5",
+        "roles_defined": "1 Roles Defined",
+        "total_roles": "6",
+        "system_modules": "15",
+        "permission_groups": "8",
+        "custom_permissions": "Enabled",
+        "email_notifications": "Enabled",
+        "sms_notifications": "Enabled",
+        "in_app_notifications": "Enabled",
+        "notice_duration": "7 Days",
+        "password_policy": "Strong",
+        "two_factor_auth": "Enabled",
+        "login_history": "View Logs",
+        "last_backup": "22 july 2025, 02:30 AM",
+        "backup_frequency": "Daily",
+        "auto_backup": "Enabled",
+        "restore_points": "12 Available",
+        "language": "English",
+        "theme": "Light",
+        "system_status": "Healthy",
+        "cache": "Clear Cache",
+        "database_size": "1.24 GB",
+        "system_logs": "View Logs"
+    },
+    "departments": [
+        {
+            "id": "dept_1",
+            "name": "Information Technology",
+            "code": "IT-ENGG",
+            "intake": 120,
+            "hod_name": "Prof. Amit Deshmukh"
+        },
+        {
+            "id": "dept_2",
+            "name": "Computer Engineering",
+            "code": "CE-ENGG",
+            "intake": 180,
+            "hod_name": "Dr. Neha Sharma"
+        },
+        {
+            "id": "dept_1784702239",
+            "name": "Mechanical Engineering",
+            "code": "ME-Engg",
+            "intake": 50,
+            "hod_name": "Dr. Rajesh Kumar"
+        }
+    ]
 }
