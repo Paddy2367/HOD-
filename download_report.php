@@ -14,24 +14,28 @@ if (file_exists($dbFile)) {
 
 switch ($report) {
     case 'Student_Attendance_Report':
-        fputcsv($output, ['Student ID', 'Name', 'Department', 'Total Classes', 'Classes Attended', 'Attendance %']);
+        fputcsv($output, ['PRN', 'Student ID', 'Name', 'Department', 'Total Classes', 'Classes Attended', 'Attendance %']);
         if (isset($data['students'])) {
             foreach ($data['students'] as $s) {
                 $total = rand(40, 50);
                 $attended = rand(30, $total);
                 $pct = round(($attended / $total) * 100, 2) . '%';
-                fputcsv($output, [$s['id'], $s['name'], $s['department'], $total, $attended, $pct]);
+                $dept = $s['dept'] ?? ($s['department'] ?? 'Information Technology');
+                $prn = $s['prn'] ?? 'N/A';
+                fputcsv($output, [$prn, $s['id'], $s['name'], $dept, $total, $attended, $pct]);
             }
         }
         break;
     
     case 'Student_Marks_Report':
-        fputcsv($output, ['Student ID', 'Name', 'Department', 'Subject', 'Marks Obtained', 'Max Marks', 'Grade']);
+        fputcsv($output, ['PRN', 'Student ID', 'Name', 'Department', 'Subject', 'Marks Obtained', 'Max Marks', 'Grade']);
         if (isset($data['students'])) {
             foreach ($data['students'] as $s) {
                 $marks = rand(40, 100);
                 $grade = $marks >= 90 ? 'A+' : ($marks >= 80 ? 'A' : ($marks >= 70 ? 'B' : ($marks >= 60 ? 'C' : 'D')));
-                fputcsv($output, [$s['id'], $s['name'], $s['department'], 'Core Computer Science', $marks, 100, $grade]);
+                $dept = $s['dept'] ?? ($s['department'] ?? 'Information Technology');
+                $prn = $s['prn'] ?? 'N/A';
+                fputcsv($output, [$prn, $s['id'], $s['name'], $dept, 'Core Computer Science', $marks, 100, $grade]);
             }
         }
         break;

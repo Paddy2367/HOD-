@@ -113,6 +113,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
     
+    // -- RESOLVE GRIEVANCE --
+    elseif ($action === 'resolve_grievance') {
+        $g_id = intval($_POST['grievance_id']);
+        $updated = false;
+        foreach ($db['grievances'] as &$g) {
+            if ($g['id'] === $g_id) {
+                $g['status'] = 'Resolved';
+                $updated = true;
+                break;
+            }
+        }
+        if ($updated) {
+            save_db($db);
+            $_SESSION['success_message'] = "Grievance marked as resolved.";
+        }
+        header("Location: hod_dashboard.php");
+        exit;
+    }
     // -- GRIEVANCE REPLY --
     elseif ($action === 'reply_grievance') {
         $grievance_id = intval($_POST['grievance_id']);
@@ -245,6 +263,9 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                     <p id="currentTabSubtitle">Welcome back, <?= htmlspecialchars($user['name']) ?></p>
                 </div>
                 <div class="user-profile-widget">
+                    <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" onclick="toggleDarkMode()">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                     <div class="notification-wrapper" style="position: relative;">
                         <div class="notification-bell" id="notificationToggle" style="cursor:pointer;">
                             <i class="fa-regular fa-bell"></i>
@@ -347,7 +368,7 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                         </script>
                     </div>
                     <div class="user-avatar-box">
-                        <img src="<?= htmlspecialchars($user['avatar'] ?? 'https://ui-avatars.com/api/?name='.urlencode($user['name']).'&background=random') ?>" alt="User Avatar">
+                        <?= get_initials_avatar($user['name'], 40, 16, 2) ?>
                         <div class="user-details">
                             <span class="name"><?= htmlspecialchars($user['name']) ?></span>
                             <span class="role"><?= htmlspecialchars($user['dept'] ?? 'IT Department') ?></span>
@@ -495,14 +516,20 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                 <td><?= htmlspecialchars($l['from']) ?> to <?= htmlspecialchars($l['to']) ?></td>
                                 <td><?= htmlspecialchars($l['reason']) ?></td>
                                 <td><span class="status-pill <?= strtolower($l['status']) ?>"><?= htmlspecialchars($l['status']) ?></span></td>
-                                <td class="faculty-actions-cell">
+                                <td class="faculty-actions-cell" style="display:flex; gap:0.5rem; align-items:center;">
+                                    <form method="POST" action="delete.php" style="margin:0;">
+                                        <input type="hidden" name="action" value="delete_item">
+                                        <input type="hidden" name="type" value="leaves">
+                                        <input type="hidden" name="id" value="<?= $l['id'] ?>">
+                                        <button type="submit" class="btn-reject" style="padding: 0.4rem 0.6rem; border-radius:4px;" title="Delete" onclick="return confirm('Delete this leave request?');"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
                                     <?php if($l['status'] === 'Pending'): ?>
-                                    <form method="POST" style="display:inline;">
+                                    <form method="POST" style="margin:0;">
                                         <input type="hidden" name="action" value="approve_leave">
                                         <input type="hidden" name="leave_id" value="<?= $l['id'] ?>">
                                         <button type="submit" class="btn-approve">Approve</button>
                                     </form>
-                                    <form method="POST" style="display:inline;">
+                                    <form method="POST" style="margin:0;">
                                         <input type="hidden" name="action" value="reject_leave">
                                         <input type="hidden" name="leave_id" value="<?= $l['id'] ?>">
                                         <button type="submit" class="btn-reject">Reject</button>
@@ -547,8 +574,23 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                 </td>
                                 <td><?= htmlspecialchars($g['date']) ?></td>
                                 <td><span class="status-pill <?= strtolower(str_replace(' ', '-', $g['status'])) ?>"><?= htmlspecialchars($g['status']) ?></span></td>
-                                <td>
-                                    <button class="btn-secondary" onclick="openGrievanceModal(<?= $g['id'] ?>)">View Chat</button>
+                                <td style="display:flex; gap:0.5rem; align-items:center;">
+                                    <?php if (isset($g['status']) && $g['status'] === 'Resolved'): ?>
+                                        <span class="status-pill resolved" style="padding: 0.35rem 0.6rem; border-radius:4px; font-weight:600; font-size: 0.8rem; height: 32px; display: flex; align-items: center;">Resolved</span>
+                                    <?php else: ?>
+                                        <form method="POST" style="margin:0;">
+                                            <input type="hidden" name="action" value="resolve_grievance">
+                                            <input type="hidden" name="grievance_id" value="<?= $g['id'] ?>">
+                                            <button type="submit" class="btn-secondary" style="padding: 0.4rem 0.6rem; border-radius:4px; height: 32px; display: flex; align-items: center;">Mark as Resolved</button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <button class="btn-secondary" onclick="openGrievanceModal(<?= $g['id'] ?>)" style="padding: 0.4rem 0.6rem; border-radius:4px; height: 32px; display: flex; align-items: center;">View Chat</button>
+                                    <form method="POST" action="delete.php" style="margin:0;">
+                                        <input type="hidden" name="action" value="delete_item">
+                                        <input type="hidden" name="type" value="grievances">
+                                        <input type="hidden" name="id" value="<?= $g['id'] ?>">
+                                        <button type="submit" class="btn-reject" style="padding: 0.4rem 0.6rem; border-radius:4px; height: 32px; display: flex; align-items: center; justify-content: center;" title="Delete" onclick="return confirm('Delete this grievance?');"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -571,6 +613,7 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                 <th>Publisher</th>
                                 <th>Date / Expiry</th>
                                 <th>Attachment</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -600,6 +643,14 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                         <span class="notice-desc">No File</span>
                                     <?php endif; ?>
                                 </td>
+                                <td>
+                                    <form method="POST" action="delete.php" style="margin:0;">
+                                        <input type="hidden" name="action" value="delete_item">
+                                        <input type="hidden" name="type" value="notices">
+                                        <input type="hidden" name="id" value="<?= $n['id'] ?>">
+                                        <button type="submit" class="btn-reject" style="padding: 0.4rem 0.6rem; border-radius:4px;" title="Delete" onclick="return confirm('Delete this notice?');"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -627,10 +678,10 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                             <tr>
                                 <td>
                                     <div style="display:flex;align-items:center;gap:1rem;">
-                                        <img src="<?= htmlspecialchars($s['avatar']) ?>" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                                        <?= get_initials_avatar($s['name'], 40, 16, 0) ?>
                                         <div>
                                             <div class="notice-title"><?= htmlspecialchars($s['name']) ?></div>
-                                            <div class="notice-desc"><?= htmlspecialchars($s['id']) ?></div>
+                                            <div class="notice-desc"><?= !empty($s['prn']) ? 'PRN: ' . htmlspecialchars($s['prn']) : htmlspecialchars($s['id']) ?></div>
                                         </div>
                                     </div>
                                 </td>
@@ -1105,6 +1156,53 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
         // Initialize first tab colors
         document.querySelector('.sidebar-nav-item.active').style.background = 'var(--primary-light)';
         document.querySelector('.sidebar-nav-item.active').style.color = 'var(--primary-color)';
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('form[action="delete.php"]').forEach(form => {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    try {
+                        let formData = new FormData(this);
+                        let response = await fetch('delete.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('Failed to delete item.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('An error occurred while deleting.');
+                    }
+                });
+            });
+        });
+
+        // Dark mode toggle handler
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const btns = document.querySelectorAll('.theme-toggle-btn');
+            btns.forEach(btn => {
+                btn.innerHTML = isDark 
+                    ? '<i class="fa-solid fa-sun" style="color: #f59e0b;"></i>' 
+                    : '<i class="fa-solid fa-moon"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme_preference') === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeIcon(true);
+            }
+        });
     </script>
 </body>
 </html>

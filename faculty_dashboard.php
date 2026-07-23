@@ -160,6 +160,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
     }
     header("Location: faculty_dashboard.php");
     exit;
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'mark_attendance') {
+    $subject = trim($_POST['subject'] ?? '');
+    $date = trim($_POST['date'] ?? date('Y-m-d'));
+    $session_time = trim($_POST['session_time'] ?? '10:00 AM');
+    $attendance_data = $_POST['attendance'] ?? [];
+
+    if (!isset($db['attendance_records'])) { $db['attendance_records'] = []; }
+    
+    $count_p = 0;
+    $count_a = 0;
+    foreach ($attendance_data as $stu_id => $status) {
+        if ($status === 'Present') $count_p++;
+        else $count_a++;
+        
+        $db['attendance_records'][] = [
+            'id' => count($db['attendance_records']) + 1,
+            'student_id' => $stu_id,
+            'faculty_name' => $user['name'],
+            'subject' => $subject,
+            'date' => date('d M Y', strtotime($date)),
+            'time' => $session_time,
+            'status' => $status
+        ];
+    }
+    save_db($db);
+    $_SESSION['success_message'] = "Attendance for '{$subject}' on " . date('d M Y', strtotime($date)) . " submitted successfully! ({$count_p} Present, {$count_a} Absent)";
+    header("Location: faculty_dashboard.php");
+    exit;
 }
 
 // Reload database to get fresh updates
@@ -189,6 +217,7 @@ $db = get_db();
                 </div>
                     <li><a class="sidebar-nav-item" onclick="switchTab('profile', this)"><i class="fa-solid fa-id-card"></i><span>My Profile</span></a></li>
                     <li><a class="sidebar-nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a></li>
+                    <li><a class="sidebar-nav-item" onclick="switchTab('attendance', this)"><i class="fa-solid fa-calendar-check"></i><span>Mark Attendance</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('leaves', this)"><i class="fa-solid fa-envelope-open-text"></i><span>Leave Approvals</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('assignments', this)"><i class="fa-solid fa-file-invoice"></i><span>Manage Assignments</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('notices', this)"><i class="fa-solid fa-bullhorn"></i><span>Publish Notices</span></a></li>
@@ -209,6 +238,9 @@ $db = get_db();
                     <p id="currentTabSubtitle">Quick access to all essential faculty services.</p>
                 </div>
                 <div class="user-profile-widget">
+                    <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" onclick="toggleDarkMode()">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                     <div class="notification-wrapper" style="position: relative;">
                         <div class="notification-bell" id="notificationToggle" style="cursor:pointer;">
                             <i class="fa-regular fa-bell"></i>
@@ -311,7 +343,7 @@ $db = get_db();
                         </script>
                     </div>
                     <div class="user-avatar-box">
-                        <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="User Avatar">
+                        <?= get_initials_avatar($user['name'], 40, 16, 2) ?>
                         <div class="user-details">
                             <span class="name"><?php echo htmlspecialchars($user['name']); ?></span>
                             <span class="role"><?php echo htmlspecialchars($user['dept']); ?></span>
@@ -419,7 +451,7 @@ $db = get_db();
             <div id="tab-profile" class="app-view">
                 <div class="settings-form-container" style="max-width: 800px; margin: 0 auto; background: white; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 2rem; box-shadow: var(--box-shadow-subtle);">
                     <div style="display: flex; gap: 2rem; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; margin-bottom: 2rem;">
-                        <img src="<?= htmlspecialchars($user['avatar'] ?? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop') ?>" alt="Faculty Avatar" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-light);">
+                        <?= get_initials_avatar($user['name'], 120, 48, 4) ?>
                         <div>
                             <h2 style="font-size: 1.75rem; font-weight: 800; color: #111827; margin: 0 0 0.5rem 0;"><?= htmlspecialchars($user['name']) ?></h2>
                             <span class="status-pill graded" style="font-size: 0.85rem; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d;">Active Faculty</span>
@@ -523,15 +555,21 @@ $db = get_db();
                                     </td>
                                     <td style="text-align: center;">
                                         <?php if ($status === 'pending'): ?>
-                                            <div class="faculty-actions-cell">
-                                                <form method="POST" action="faculty_dashboard.php" style="display:inline;">
+                                            <div class="faculty-actions-cell" style="display:flex; gap:0.5rem; justify-content:center;">
+                                                <form method="POST" action="delete.php" style="margin:0;">
+                                                    <input type="hidden" name="action" value="delete_item">
+                                                    <input type="hidden" name="type" value="leaves">
+                                                    <input type="hidden" name="id" value="<?php echo $leave['id']; ?>">
+                                                    <button type="submit" class="btn-reject" style="padding: 0.4rem 0.6rem; border-radius:4px;" title="Delete" onclick="return confirm('Delete this leave request?');"><i class="fa-solid fa-trash"></i></button>
+                                                </form>
+                                                <form method="POST" action="faculty_dashboard.php" style="margin:0;">
                                                     <input type="hidden" name="action" value="approve">
                                                     <input type="hidden" name="leave_id" value="<?php echo $leave['id']; ?>">
                                                     <button type="submit" class="btn-approve">
                                                         <i class="fa-solid fa-check"></i> Approve
                                                     </button>
                                                 </form>
-                                                <form method="POST" action="faculty_dashboard.php" style="display:inline;">
+                                                <form method="POST" action="faculty_dashboard.php" style="margin:0;">
                                                     <input type="hidden" name="action" value="reject">
                                                     <input type="hidden" name="leave_id" value="<?php echo $leave['id']; ?>">
                                                     <button type="submit" class="btn-reject">
@@ -617,9 +655,19 @@ $db = get_db();
                         <div style="width: 48px; height: 48px; background: #f5f3ff; color: #8b5cf6; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">
                             <i class="fa-solid fa-file-lines"></i>
                         </div>
-                        <div>
-                            <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.35rem; color: #1e293b;"><?= htmlspecialchars($a['title'] ?? 'Unit Assignment') ?></h4>
-                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.65rem;"><?= htmlspecialchars($a['desc'] ?? 'Complete the assignment as per instructions.') ?></p>
+                        <div style="flex:1;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.35rem; color: #1e293b;"><?= htmlspecialchars($a['title'] ?? 'Unit Assignment') ?></h4>
+                                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.65rem;"><?= htmlspecialchars($a['desc'] ?? 'Complete the assignment as per instructions.') ?></p>
+                                </div>
+                                <form method="POST" action="delete.php" style="margin:0;">
+                                    <input type="hidden" name="action" value="delete_item">
+                                    <input type="hidden" name="type" value="assignments">
+                                    <input type="hidden" name="id" value="<?= $a['id'] ?? 0 ?>">
+                                    <button type="submit" style="background:transparent;border:none;color:#ef4444;cursor:pointer;padding:0.4rem; font-size:1rem;" title="Delete Assignment" onclick="return confirm('Delete this assignment?');"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </div>
                             <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: #4f46e5; font-weight: 500;">
                                 <span><i class="fa-regular fa-calendar"></i> Due: <?= htmlspecialchars($a['due']) ?></span>
                                 <?php if (!empty($a['file'])): ?>
@@ -740,12 +788,18 @@ $db = get_db();
                         <div style="flex: 1;">
                             <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.35rem; color: #1e293b;"><?= htmlspecialchars($n['title']) ?></h4>
                             <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.65rem;"><?= htmlspecialchars($n['desc']) ?></p>
-                            <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: #475569; font-weight: 500;">
+                            <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: #475569; font-weight: 500; flex-wrap: wrap;">
                                 <span><i class="fa-regular fa-calendar" style="color: #64748b;"></i> Published: <?= htmlspecialchars($n['date']) ?></span>
                                 <span><i class="fa-regular fa-clock" style="color: #64748b;"></i> Expiry: <?= htmlspecialchars($n['expiry'] ?: 'N/A') ?></span>
                                 <?php if (!empty($n['attachment'])): ?>
                                     <a href="<?= htmlspecialchars($n['attachment']) ?>" target="_blank" style="color: #0284c7; text-decoration: none;"><i class="fa-solid fa-paperclip"></i> <?= htmlspecialchars($n['attachment']) ?></a>
                                 <?php endif; ?>
+                                <form method="POST" action="delete.php" style="margin:0; margin-left:auto;">
+                                    <input type="hidden" name="action" value="delete_item">
+                                    <input type="hidden" name="type" value="notices">
+                                    <input type="hidden" name="id" value="<?= $n['id'] ?>">
+                                    <button type="submit" style="background:transparent;border:none;color:#ef4444;cursor:pointer;padding:0.2rem;" title="Delete Notice" onclick="return confirm('Delete this notice?');"><i class="fa-solid fa-trash"></i> Delete</button>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -796,23 +850,31 @@ $db = get_db();
                                 <td style="padding: 1.25rem 1.5rem;">
                                     <div style="font-weight: 600; color: #1e293b; font-size: 0.95rem; margin-bottom: 0.25rem;"><?= htmlspecialchars($g['category']) ?></div>
                                     <div style="font-size: 0.85rem; color: #475569; margin-bottom: 0.35rem;"><?= htmlspecialchars($g['title']) ?></div>
-                                    <a href="#" style="font-size: 0.8rem; color: #4f46e5; font-weight: 600; text-decoration: none;">View Details</a>
                                 </td>
                                 <td style="padding: 1.25rem 1.5rem; font-size: 0.9rem; color: #334155;">
                                     <?= htmlspecialchars($g['date']) ?>
                                 </td>
                                 <td style="padding: 1.25rem 1.5rem; text-align: center;">
-                                    <?php if (isset($g['status']) && $g['status'] === 'Resolved'): ?>
-                                        <span style="display: inline-block; padding: 0.35rem 1rem; background: #dcfce7; color: #166534; font-size: 0.85rem; font-weight: 600; border-radius: 6px;">Resolved</span>
-                                    <?php else: ?>
-                                        <form method="POST" style="margin: 0;">
-                                            <input type="hidden" name="action" value="resolve_grievance">
-                                            <input type="hidden" name="grievance_id" value="<?= $g['id'] ?>">
-                                            <button type="submit" style="background: white; border: 1px solid #4f46e5; color: #4f46e5; padding: 0.4rem 0.85rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                                                <i class="fa-solid fa-check" style="margin-right: 0.35rem;"></i> Mark as Resolved
-                                            </button>
+                                    <div style="display:flex; gap:0.5rem; align-items:center; justify-content:center;">
+                                        <?php if (isset($g['status']) && $g['status'] === 'Resolved'): ?>
+                                            <span style="display: inline-block; padding: 0.35rem 1rem; background: #dcfce7; color: #166534; font-size: 0.85rem; font-weight: 600; border-radius: 6px; height: 32px; display: flex; align-items: center;">Resolved</span>
+                                        <?php else: ?>
+                                            <form method="POST" style="margin: 0;">
+                                                <input type="hidden" name="action" value="resolve_grievance">
+                                                <input type="hidden" name="grievance_id" value="<?= $g['id'] ?>">
+                                                <button type="submit" style="background: white; border: 1px solid #4f46e5; color: #4f46e5; padding: 0.4rem 0.85rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; height: 32px; display: flex; align-items: center;">
+                                                    <i class="fa-solid fa-check" style="margin-right: 0.35rem;"></i> Mark as Resolved
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                        <button onclick='showGrievanceDetails(<?= htmlspecialchars(json_encode($g), ENT_QUOTES, "UTF-8") ?>); return false;' style="background: white; border: 1px solid #64748b; color: #64748b; padding: 0.4rem 0.85rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; height: 32px; display: flex; align-items: center;">View Chat</button>
+                                        <form method="POST" action="delete.php" style="margin:0;">
+                                            <input type="hidden" name="action" value="delete_item">
+                                            <input type="hidden" name="type" value="grievances">
+                                            <input type="hidden" name="id" value="<?= $g['id'] ?>">
+                                            <button type="submit" style="background: white; border: 1px solid #ef4444; color: #ef4444; padding: 0.4rem 0.6rem; border-radius: 6px; font-weight: 600; cursor: pointer; height: 32px; display: flex; align-items: center; justify-content: center;" title="Delete" onclick="return confirm('Delete this grievance?');"><i class="fa-solid fa-trash"></i></button>
                                         </form>
-                                    <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -821,11 +883,204 @@ $db = get_db();
                 </div>
             </div>
 
+            <!-- ============================================ -->
+            <!-- MARK ATTENDANCE PAGE                         -->
+            <!-- ============================================ -->
+            <div id="tab-attendance" class="app-view">
+                <form method="POST" action="faculty_dashboard.php">
+                    <input type="hidden" name="action" value="mark_attendance">
+                    
+                    <!-- Class & Lecture Controls Bar -->
+                    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
+                        <h3 style="font-size: 1.15rem; font-weight: 700; color: #1e293b; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-chalkboard-user" style="color: #10b981;"></i> Select Lecture & Teaching Class
+                        </h3>
+                        
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.25rem; align-items: flex-end;">
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem;">Assigned Subject & Teaching Class</label>
+                                <select name="subject" required style="width: 100%; padding: 0.65rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.95rem; color: #0f172a; font-weight: 600; background: #f8fafc;">
+                                    <?php 
+                                        $user_subj = $user['subjects'] ?? 'Data Structures & Algorithms';
+                                        $sub_list = array_map('trim', explode(',', $user_subj));
+                                        foreach ($sub_list as $s):
+                                    ?>
+                                        <option value="<?= htmlspecialchars($s) ?>"><?= htmlspecialchars($s) ?> — IT Div A (Semester 5)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem;">Lecture Date</label>
+                                <input type="date" name="date" value="<?= date('Y-m-d') ?>" required style="width: 100%; padding: 0.65rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.95rem; color: #0f172a; background: #f8fafc;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem;">Time Slot</label>
+                                <select name="session_time" style="width: 100%; padding: 0.65rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.95rem; color: #0f172a; background: #f8fafc;">
+                                    <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
+                                    <option value="10:00 AM - 11:00 AM" selected>10:00 AM - 11:00 AM</option>
+                                    <option value="11:30 AM - 12:30 PM">11:30 AM - 12:30 PM</option>
+                                    <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Attendance Sheet -->
+                    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                            <h3 style="font-size: 1.15rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fa-solid fa-users" style="color: #4f46e5;"></i> Student Class Roll List (Mark Direct Attendance)
+                            </h3>
+                            <div style="display: flex; gap: 0.75rem;">
+                                <button type="button" onclick="markAllAttendance('Present')" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                                    <i class="fa-solid fa-check-double" style="margin-right: 4px;"></i> Mark All Present
+                                </button>
+                                <button type="button" onclick="markAllAttendance('Absent')" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                                    <i class="fa-solid fa-xmark" style="margin-right: 4px;"></i> Mark All Absent
+                                </button>
+                                <button type="submit" style="background: #10b981; color: white; border: none; padding: 0.5rem 1.25rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save & Submit Attendance
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Student Name</th>
+                                        <th>Roll No / PRN</th>
+                                        <th>Class & Division</th>
+                                        <th>Overall Attendance</th>
+                                        <th style="text-align: center;">Mark Attendance Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                        $students = $db['students'] ?? [];
+                                        foreach ($students as $s_idx => $stu):
+                                            $st_id = $stu['username'] ?? $stu['id'];
+                                            $parts = explode(" ", $stu['name']);
+                                            $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
+                                    ?>
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="font-weight: 600; color: #64748b;"><?= $s_idx + 1 ?></td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                    <?= $initials ?>
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;"><?= htmlspecialchars($stu['name']) ?></div>
+                                                    <div style="font-size: 0.75rem; color: #64748b;"><?= htmlspecialchars($stu['email'] ?? '') ?></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="font-weight: 600; color: #4f46e5;"><?= htmlspecialchars($stu['prn'] ?? $st_id) ?></td>
+                                        <td><span style="background: #f1f5f9; color: #334155; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600;"><?= htmlspecialchars($stu['dept'] ?? 'IT Div A') ?></span></td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <span style="font-weight: 700; color: #10b981; font-size: 0.9rem;"><?= htmlspecialchars($stu['attendance'] ?? '85%') ?></span>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <div style="display: inline-flex; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 3px; gap: 4px;">
+                                                <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; transition: all 0.2s;">
+                                                    <input type="radio" name="attendance[<?= $st_id ?>]" value="Present" checked style="accent-color: #166534;">
+                                                    <span style="color: #166534;">Present</span>
+                                                </label>
+                                                <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; transition: all 0.2s;">
+                                                    <input type="radio" name="attendance[<?= $st_id ?>]" value="Absent" style="accent-color: #dc2626;">
+                                                    <span style="color: #dc2626;">Absent</span>
+                                                </label>
+                                                <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; transition: all 0.2s;">
+                                                    <input type="radio" name="attendance[<?= $st_id ?>]" value="On Leave" style="accent-color: #d97706;">
+                                                    <span style="color: #d97706;">On Leave</span>
+                                                </label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Grievance Details Modal -->
+            <div id="grievanceModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1050; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;">
+                <div class="modal-content" style="background: #fff; width: 100%; max-width: 500px; border-radius: 16px; padding: 30px; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0;">Grievance Details</h3>
+                        <button onclick="closeGrievanceModal()" style="background: none; border: none; font-size: 1.25rem; color: #64748b; cursor: pointer; transition: color 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Student Name & ID</div>
+                        <div id="modal-g-student" style="font-size: 1rem; color: #1e293b; font-weight: 600;"></div>
+                    </div>
+                    <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Category</div>
+                            <div id="modal-g-category" style="font-size: 0.95rem; color: #334155; font-weight: 500;"></div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Date Submitted</div>
+                            <div id="modal-g-date" style="font-size: 0.95rem; color: #334155; font-weight: 500;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Title</div>
+                        <div id="modal-g-title" style="font-size: 0.95rem; color: #1e293b; font-weight: 600;"></div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Description</div>
+                        <div id="modal-g-desc" style="font-size: 0.95rem; color: #475569; line-height: 1.5; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; white-space: pre-wrap;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button onclick="closeGrievanceModal()" style="background: #e2e8f0; color: #475569; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Close</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
     <!-- JavaScript code for navigation -->
     <script>
+        function showGrievanceDetails(g) {
+            document.getElementById('modal-g-student').textContent = g.student_name + ' (' + g.student_id + ')';
+            document.getElementById('modal-g-category').textContent = g.category;
+            document.getElementById('modal-g-date').textContent = g.date;
+            document.getElementById('modal-g-title').textContent = g.title;
+            document.getElementById('modal-g-desc').textContent = g.desc || 'No description provided.';
+            
+            const modal = document.getElementById('grievanceModal');
+            modal.style.display = 'flex';
+            // Trigger reflow
+            void modal.offsetWidth;
+            modal.style.opacity = '1';
+            modal.querySelector('.modal-content').style.transform = 'translateY(0)';
+        }
+        
+        function closeGrievanceModal() {
+            const modal = document.getElementById('grievanceModal');
+            modal.style.opacity = '0';
+            modal.querySelector('.modal-content').style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('grievanceModal');
+            if (e.target === modal) {
+                closeGrievanceModal();
+            }
+        });
         function switchTab(tabName, element) {
             const items = document.querySelectorAll('.sidebar-nav-item');
             items.forEach(item => item.classList.remove('active'));
@@ -858,12 +1113,69 @@ $db = get_db();
                 document.getElementById('tab-dashboard').classList.add('active');
                 headerTitle.textContent = "Dashboard";
                 headerSubtitle.textContent = "Quick access to all essential faculty services.";
+            } else if (tabName === 'attendance') {
+                document.getElementById('tab-attendance').classList.add('active');
+                headerTitle.textContent = "Mark Attendance";
+                headerSubtitle.textContent = "Select your teaching class and mark student lecture attendance.";
             } else if (tabName === 'profile') {
                 document.getElementById('tab-profile').classList.add('active');
                 headerTitle.textContent = "My Profile";
                 headerSubtitle.textContent = "View and manage your professional credentials.";
             }
         }
+    </script>
+    <script>
+        function markAllAttendance(status) {
+            document.querySelectorAll(`input[type="radio"][value="${status}"]`).forEach(radio => {
+                radio.checked = true;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('form[action="delete.php"]').forEach(form => {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    try {
+                        let formData = new FormData(this);
+                        let response = await fetch('delete.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('Failed to delete item.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('An error occurred while deleting.');
+                    }
+                });
+            });
+        });
+
+        // Dark mode toggle handler
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const btns = document.querySelectorAll('.theme-toggle-btn');
+            btns.forEach(btn => {
+                btn.innerHTML = isDark 
+                    ? '<i class="fa-solid fa-sun" style="color: #f59e0b;"></i>' 
+                    : '<i class="fa-solid fa-moon"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme_preference') === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeIcon(true);
+            }
+        });
     </script>
 </body>
 </html>

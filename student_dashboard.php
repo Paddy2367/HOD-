@@ -189,6 +189,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                 <ul class="sidebar-nav">
                     <li><a class="sidebar-nav-item" onclick="switchTab('profile', this)"><i class="fa-solid fa-id-card"></i><span>My Profile</span></a></li>
                     <li><a class="sidebar-nav-item active" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-border-all"></i><span>Dashboard</span></a></li>
+                    <li><a class="sidebar-nav-item" onclick="switchTab('attendance', this)"><i class="fa-solid fa-calendar-check"></i><span>Attendance</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('assignments', this)"><i class="fa-solid fa-file-invoice"></i><span>Assignments</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('leaves', this)"><i class="fa-solid fa-envelope-open-text"></i><span>Leave Requests</span></a></li>
                     <li><a class="sidebar-nav-item" onclick="switchTab('grievance', this)"><i class="fa-solid fa-circle-question"></i><span>Grievance</span></a></li>
@@ -209,6 +210,9 @@ foreach ($db['leaves'] ?? [] as $leave) {
                     <p id="currentTabSubtitle">Quick access to all essential student services.</p>
                 </div>
                 <div class="user-profile-widget">
+                    <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" onclick="toggleDarkMode()">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                     <div class="notification-wrapper" style="position: relative;">
                         <div class="notification-bell" id="notificationToggle" style="cursor:pointer;">
                             <i class="fa-regular fa-bell"></i>
@@ -311,6 +315,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                         </script>
                     </div>
                     <div class="user-avatar-box">
+                        <?= get_initials_avatar($user['name'], 40, 16, 2) ?>
                         <div class="user-details">
                             <span class="name"><?php echo htmlspecialchars($user['name']); ?></span>
                             <span class="role"><?php echo htmlspecialchars($user['dept']); ?></span>
@@ -375,48 +380,115 @@ foreach ($db['leaves'] ?? [] as $leave) {
                 // Notices
                 $total_notices = count($db['notices'] ?? []);
                 ?>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.25rem;">
                     
+                    <!-- Overall Attendance Card -->
+                    <div style="background: white; border-radius: 12px; padding: 1.75rem 1.25rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('attendance', document.querySelectorAll('.sidebar-nav-item')[2])">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 1.15rem;">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <h4 style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Overall Attendance</h4>
+                        <div style="color: #166534; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.35rem;">87.5%</div>
+                        <p style="color: #10b981; font-size: 0.8rem; font-weight: 700; margin-bottom: 0;">Safe Standing (>75%)</p>
+                    </div>
+
                     <!-- Assignments Summary Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[2])">
-                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                    <div style="background: white; border-radius: 12px; padding: 1.75rem 1.25rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('assignments', document.querySelectorAll('.sidebar-nav-item')[3])">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 1.15rem;">
                             <i class="fa-solid fa-clipboard-list"></i>
                         </div>
-                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Pending Assignments</h4>
-                        <div style="color: #6366f1; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $pending_assignments ?></div>
-                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Out of <?= $total_assignments ?> total</p>
+                        <h4 style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Pending Assignments</h4>
+                        <div style="color: #6366f1; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.35rem;"><?= $pending_assignments ?></div>
+                        <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0;">Out of <?= $total_assignments ?> total</p>
                     </div>
 
                     <!-- Leaves Summary Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[3])">
-                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                    <div style="background: white; border-radius: 12px; padding: 1.75rem 1.25rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('leaves', document.querySelectorAll('.sidebar-nav-item')[4])">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 1.15rem;">
                             <i class="fa-regular fa-calendar-check"></i>
                         </div>
-                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Leaves Pending</h4>
-                        <div style="color: #10b981; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $pending_leaves ?></div>
-                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Total Applied: <?= $my_leaves ?></p>
+                        <h4 style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Leaves Pending</h4>
+                        <div style="color: #10b981; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.35rem;"><?= $pending_leaves ?></div>
+                        <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0;">Total Applied: <?= $my_leaves ?></p>
                     </div>
 
                     <!-- Grievance Summary Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('grievance', document.querySelectorAll('.sidebar-nav-item')[4])">
-                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #ffedd5; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                    <div style="background: white; border-radius: 12px; padding: 1.75rem 1.25rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('grievance', document.querySelectorAll('.sidebar-nav-item')[5])">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #ffedd5; color: #f97316; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 1.15rem;">
                             <i class="fa-regular fa-comments"></i>
                         </div>
-                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Grievances</h4>
-                        <div style="color: #f97316; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $active_grievances ?></div>
-                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Requires resolution</p>
+                        <h4 style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Grievances</h4>
+                        <div style="color: #f97316; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.35rem;"><?= $active_grievances ?></div>
+                        <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0;">Requires resolution</p>
                     </div>
 
                     <!-- Notice Summary Card -->
-                    <div style="background: white; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[5])">
-                        <div style="width: 64px; height: 64px; border-radius: 50%; background: #dbeafe; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.25rem;">
+                    <div style="background: white; border-radius: 12px; padding: 1.75rem 1.25rem; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 15px -3px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)';" onclick="switchTab('notices', document.querySelectorAll('.sidebar-nav-item')[6])">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #dbeafe; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 1.15rem;">
                             <i class="fa-regular fa-bell"></i>
                         </div>
-                        <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Notices</h4>
-                        <div style="color: #3b82f6; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $total_notices ?></div>
-                        <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0;">Recent updates</p>
+                        <h4 style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Active Notices</h4>
+                        <div style="color: #3b82f6; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.35rem;"><?= $total_notices ?></div>
+                        <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0;">Recent updates</p>
                     </div>
 
+                </div>
+
+                <!-- Dashboard Attendance Quick Overview Widget -->
+                <div style="margin-top: 2rem; background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 2rem; box-shadow: 0 4px 12px -2px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1.35rem; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="fa-solid fa-calendar-days" style="color: #4f46e5; font-size: 1.4rem;"></i> Attendance Summary Overview
+                        </h3>
+                        <a href="#" onclick="switchTab('attendance', document.querySelectorAll('.sidebar-nav-item')[2]); return false;" style="color: #4f46e5; font-size: 0.95rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 0.35rem;">View Full Attendance Tracker <i class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                        <!-- Mini Subject 1 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                                <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a; line-height: 1.3;">Data Structures & Algorithms</span>
+                                <span style="font-weight: 800; font-size: 1.25rem; color: #10b981;">90.0%</span>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin: 0.75rem 0 0.85rem 0;">
+                                <div style="width: 90%; height: 100%; background: #10b981; border-radius: 5px;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; font-weight: 500;">
+                                <span><i class="fa-solid fa-user-tie" style="margin-right: 4px;"></i>Prof. Rajesh Sharma</span>
+                                <span style="font-weight: 700; color: #334155;">36 / 40 Attended</span>
+                            </div>
+                        </div>
+
+                        <!-- Mini Subject 2 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                                <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a; line-height: 1.3;">Object Oriented Programming</span>
+                                <span style="font-weight: 800; font-size: 1.25rem; color: #8b5cf6;">92.5%</span>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin: 0.75rem 0 0.85rem 0;">
+                                <div style="width: 92.5%; height: 100%; background: #8b5cf6; border-radius: 5px;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; font-weight: 500;">
+                                <span><i class="fa-solid fa-user-tie" style="margin-right: 4px;"></i>Prof. Neha Patil</span>
+                                <span style="font-weight: 700; color: #334155;">37 / 40 Attended</span>
+                            </div>
+                        </div>
+
+                        <!-- Mini Subject 3 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                                <span style="font-weight: 700; font-size: 1.05rem; color: #0f172a; line-height: 1.3;">Operating Systems</span>
+                                <span style="font-weight: 800; font-size: 1.25rem; color: #3b82f6;">80.0%</span>
+                            </div>
+                            <div style="width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; margin: 0.75rem 0 0.85rem 0;">
+                                <div style="width: 80%; height: 100%; background: #3b82f6; border-radius: 5px;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; font-weight: 500;">
+                                <span><i class="fa-solid fa-user-gear" style="margin-right: 4px;"></i>Prof. Amit Deshmukh (HOD)</span>
+                                <span style="font-weight: 700; color: #334155;">32 / 40 Attended</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -803,16 +875,233 @@ foreach ($db['leaves'] ?? [] as $leave) {
             </div>
 
             <!-- ============================================ -->
+            <!-- ATTENDANCE TRACKER PAGE                     -->
+            <!-- ============================================ -->
+            <div id="tab-attendance" class="app-view">
+                <!-- Summary Cards -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 1.25rem;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Overall Attendance</div>
+                            <div style="font-size: 1.85rem; font-weight: 800; color: #0f172a; margin: 0.15rem 0;">87.5%</div>
+                            <span style="display: inline-block; background: #dcfce7; color: #15803d; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">Safe (>75%)</span>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 1.25rem;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: #dbeafe; color: #1e40af; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Total Conducted</div>
+                            <div style="font-size: 1.85rem; font-weight: 800; color: #0f172a; margin: 0.15rem 0;">120</div>
+                            <span style="color: #64748b; font-size: 0.75rem;">Lectures held</span>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 1.25rem;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Lectures Attended</div>
+                            <div style="font-size: 1.85rem; font-weight: 800; color: #16a34a; margin: 0.15rem 0;">105</div>
+                            <span style="color: #64748b; font-size: 0.75rem;">Present in class</span>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 1.25rem;">
+                        <div style="width: 56px; height: 56px; border-radius: 50%; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                            <i class="fa-solid fa-user-xmark"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Missed Lectures</div>
+                            <div style="font-size: 1.85rem; font-weight: 800; color: #dc2626; margin: 0.15rem 0;">15</div>
+                            <span style="color: #64748b; font-size: 0.75rem;">Includes 4 approved leaves</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subject-wise Breakdown Section -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: #1e293b; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-book-bookmark" style="color: #4f46e5;"></i> Subject-wise Attendance Breakdown
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;">
+                        <!-- Subject 1 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Data Structures & Algorithms</h4>
+                                    <span style="font-size: 0.75rem; color: #64748b;"><i class="fa-solid fa-user-tie" style="margin-right: 4px;"></i>Prof. Rajesh Sharma</span>
+                                </div>
+                                <span style="font-size: 1.1rem; font-weight: 800; color: #10b981;">90.0%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 0.75rem 0;">
+                                <div style="width: 90%; height: 100%; background: #10b981; border-radius: 4px;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
+                                <span>Attended: 36 / 40</span>
+                                <span>Missed: 4</span>
+                            </div>
+                        </div>
+
+                        <!-- Subject 2 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Object Oriented Programming</h4>
+                                    <span style="font-size: 0.75rem; color: #64748b;"><i class="fa-solid fa-user-tie" style="margin-right: 4px;"></i>Prof. Neha Patil</span>
+                                </div>
+                                <span style="font-size: 1.1rem; font-weight: 800; color: #8b5cf6;">92.5%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 0.75rem 0;">
+                                <div style="width: 92.5%; height: 100%; background: #8b5cf6; border-radius: 4px;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
+                                <span>Attended: 37 / 40</span>
+                                <span>Missed: 3</span>
+                            </div>
+                        </div>
+
+                        <!-- Subject 3 (HOD) -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">Operating Systems</h4>
+                                    <span style="font-size: 0.75rem; color: #64748b;"><i class="fa-solid fa-user-gear" style="margin-right: 4px;"></i>Prof. Amit Deshmukh (HOD)</span>
+                                </div>
+                                <span style="font-size: 1.1rem; font-weight: 800; color: #3b82f6;">80.0%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 0.75rem 0;">
+                                <div style="width: 80%; height: 100%; background: #3b82f6; border-radius: 4px;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
+                                <span>Attended: 32 / 40</span>
+                                <span>Missed: 8</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lecture Logs (When He Attended Lectures) -->
+                <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                        <h3 style="font-size: 1.15rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-clock-rotate-left" style="color: #4f46e5;"></i> Lecture Attendance History Logs
+                        </h3>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <select class="select-filter" id="attendanceSubjectFilter" onchange="filterAttendanceLogs()" style="padding: 0.45rem 0.85rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; color: #334155;">
+                                <option value="all">All Subjects</option>
+                                <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
+                                <option value="Object Oriented Programming">Object Oriented Programming</option>
+                                <option value="Operating Systems">Operating Systems</option>
+                            </select>
+                            <select class="select-filter" id="attendanceStatusFilter" onchange="filterAttendanceLogs()" style="padding: 0.45rem 0.85rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; color: #334155;">
+                                <option value="all">All Statuses</option>
+                                <option value="Present">Present Only</option>
+                                <option value="Absent">Absent Only</option>
+                                <option value="On Leave">On Leave Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="attendanceLogsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Subject</th>
+                                    <th>Lecture Topic / Unit</th>
+                                    <th>Faculty Instructor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-subject="Data Structures & Algorithms" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">23 Jul 2026, 10:00 AM</td>
+                                    <td>Data Structures & Algorithms</td>
+                                    <td>Trees & Binary Search Trees (Unit 4)</td>
+                                    <td>Prof. Rajesh Sharma</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                                <tr data-subject="Operating Systems" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">23 Jul 2026, 09:00 AM</td>
+                                    <td>Operating Systems</td>
+                                    <td>Process Synchronization & Semaphores</td>
+                                    <td>Prof. Amit Deshmukh (HOD)</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                                <tr data-subject="Object Oriented Programming" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">22 Jul 2026, 11:30 AM</td>
+                                    <td>Object Oriented Programming</td>
+                                    <td>Inheritance, Abstraction & Polymorphism</td>
+                                    <td>Prof. Neha Patil</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                                <tr data-subject="Operating Systems" data-status="Absent">
+                                    <td style="font-weight: 600; color: #1e293b;">21 Jul 2026, 01:00 PM</td>
+                                    <td>Operating Systems</td>
+                                    <td>CPU Scheduling: FCFS & Round Robin</td>
+                                    <td>Prof. Amit Deshmukh (HOD)</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #fee2e2; color: #b91c1c; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-xmark" style="margin-right: 4px;"></i>Absent</span></td>
+                                </tr>
+                                <tr data-subject="Data Structures & Algorithms" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">20 Jul 2026, 03:00 PM</td>
+                                    <td>Data Structures & Algorithms</td>
+                                    <td>Stack & Queue Applications in C++</td>
+                                    <td>Prof. Rajesh Sharma</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                                <tr data-subject="Object Oriented Programming" data-status="On Leave">
+                                    <td style="font-weight: 600; color: #1e293b;">20 Jul 2026, 11:30 AM</td>
+                                    <td>Object Oriented Programming</td>
+                                    <td>Virtual Functions & Dynamic Binding</td>
+                                    <td>Prof. Neha Patil</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #fef3c7; color: #b45309; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-file-signature" style="margin-right: 4px;"></i>On Leave</span></td>
+                                </tr>
+                                <tr data-subject="Object Oriented Programming" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">18 Jul 2026, 02:00 PM</td>
+                                    <td>Object Oriented Programming</td>
+                                    <td>Classes, Objects & Constructors</td>
+                                    <td>Prof. Neha Patil</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                                <tr data-subject="Operating Systems" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">17 Jul 2026, 09:00 AM</td>
+                                    <td>Operating Systems</td>
+                                    <td>Introduction to OS Kernels & System Calls</td>
+                                    <td>Prof. Amit Deshmukh (HOD)</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                                <tr data-subject="Data Structures & Algorithms" data-status="Present">
+                                    <td style="font-weight: 600; color: #1e293b;">16 Jul 2026, 11:30 AM</td>
+                                    <td>Data Structures & Algorithms</td>
+                                    <td>Array & Linked List Operations</td>
+                                    <td>Prof. Rajesh Sharma</td>
+                                    <td><span style="display: inline-block; padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i>Present</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
             <!-- 5. STUDENT PROFILE PAGE                      -->
             <!-- ============================================ -->
             <div id="tab-profile" class="app-view">
                 <div class="settings-form-container" style="max-width: 800px; margin: 0 auto; background: white; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); padding: 2rem; box-shadow: var(--box-shadow-subtle);">
                     <div style="display: flex; gap: 2rem; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; margin-bottom: 2rem;">
-                        <img src="<?= htmlspecialchars($user['avatar'] ?? 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop') ?>" alt="Student Avatar" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-light);">
+                        <?= get_initials_avatar($user['name'], 120, 48, 4) ?>
                         <div>
                             <h2 style="font-size: 1.75rem; font-weight: 800; color: #111827; margin: 0 0 0.5rem 0;"><?= htmlspecialchars($user['name']) ?></h2>
                             <span class="status-pill graded" style="font-size: 0.85rem; padding: 0.25rem 0.75rem;">Active Student</span>
-                            <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.95rem;">ID: <?= htmlspecialchars($user['username']) ?> | <?= htmlspecialchars($user['dept']) ?></p>
+                            <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.95rem;">PRN: <span style="font-weight: 700; color: #4f46e5;"><?= htmlspecialchars($user['prn'] ?? 'IT0001') ?></span> | ID: <?= htmlspecialchars($user['username']) ?> | <?= htmlspecialchars($user['dept']) ?></p>
                         </div>
                     </div>
                     
@@ -822,8 +1111,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
                             <input type="text" readonly value="<?= htmlspecialchars($user['name']) ?>" style="background: #f9fafb; cursor: not-allowed; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: var(--border-radius-sm);">
                         </div>
                         <div class="form-group-col">
-                            <label>Student ID / Roll No</label>
-                            <input type="text" readonly value="<?= htmlspecialchars($user['username']) ?>" style="background: #f9fafb; cursor: not-allowed; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: var(--border-radius-sm);">
+                            <label>PRN (Permanent Registration Number)</label>
+                            <input type="text" readonly value="<?= htmlspecialchars($user['prn'] ?? 'IT0001') ?>" style="background: #f9fafb; cursor: not-allowed; font-weight: 700; color: #4f46e5; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: var(--border-radius-sm);">
                         </div>
                     </div>
                     
@@ -956,6 +1245,10 @@ foreach ($db['leaves'] ?? [] as $leave) {
                 document.getElementById('tab-dashboard').classList.add('active');
                 headerTitle.textContent = "Dashboard";
                 headerSubtitle.textContent = "Quick access to all essential student portals and services.";
+            } else if (tabName === 'attendance') {
+                document.getElementById('tab-attendance').classList.add('active');
+                headerTitle.textContent = "Attendance Tracker";
+                headerSubtitle.textContent = "Monitor overall attendance, subject-wise statistics, and lecture history.";
             } else if (tabName === 'profile') {
                 document.getElementById('tab-profile').classList.add('active');
                 headerTitle.textContent = "My Profile";
@@ -1088,6 +1381,45 @@ foreach ($db['leaves'] ?? [] as $leave) {
 
             sortedRows.forEach(row => tbody.appendChild(row));
         }
+
+        // Attendance logs filter
+        function filterAttendanceLogs() {
+            const subjectFilter = document.getElementById('attendanceSubjectFilter').value;
+            const statusFilter = document.getElementById('attendanceStatusFilter').value;
+            const rows = document.querySelectorAll('#attendanceLogsTable tbody tr');
+
+            rows.forEach(row => {
+                const subjectMatch = (subjectFilter === 'all' || row.getAttribute('data-subject') === subjectFilter);
+                const statusMatch = (statusFilter === 'all' || row.getAttribute('data-status') === statusFilter);
+                if (subjectMatch && statusMatch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        // Dark mode toggle handler
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const btns = document.querySelectorAll('.theme-toggle-btn');
+            btns.forEach(btn => {
+                btn.innerHTML = isDark 
+                    ? '<i class="fa-solid fa-sun" style="color: #f59e0b;"></i>' 
+                    : '<i class="fa-solid fa-moon"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme_preference') === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeIcon(true);
+            }
+        });
     </script>
 </body>
 </html>

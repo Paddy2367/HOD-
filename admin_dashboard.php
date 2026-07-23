@@ -66,8 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         if ($role === 'student') {
             $new_id = '125UIT' . rand(1000, 9999);
+            $prn = trim($_POST['prn'] ?? '');
+            if (empty($prn)) {
+                $prn = generate_next_prn($db, $department);
+            }
             $db['students'][] = [
                 'id' => $new_id,
+                'prn' => $prn,
                 'username' => strtolower(str_replace(' ', '', $name)) . rand(10,99),
                 'name' => $name,
                 'email' => $email,
@@ -79,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'avatar' => 'https://ui-avatars.com/api/?name='.urlencode($name).'&background=random'
             ];
             save_db($db);
-            $_SESSION['success_message'] = "Student added successfully!";
+            $_SESSION['success_message'] = "Student added successfully with PRN: {$prn}!";
             $_SESSION['active_tab'] = 'user-management';
             header("Location: admin_dashboard.php");
             exit;
@@ -176,13 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Calculate User Counts for IT Department
-$student_count = 0;
-foreach ($db['students'] as $s) {
-    if (strpos($s['dept'], 'IT') !== false) {
-        $student_count++;
-    }
-}
+// Calculate User Counts
+$student_count = count($db['students'] ?? []);
 
 $faculty_count = 0;
 $hod_count = 0;
@@ -213,6 +213,7 @@ if (isset($db['departments'])) {
     <title>College ERP Portal - Admin Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
     <style>
         * {
             margin: 0;
@@ -975,7 +976,10 @@ if (isset($db['departments'])) {
                 <h1 id="banner-title">Dashboard</h1>
                 <p id="banner-desc">Welcome to the Admin Panel.</p>
             </div>
-            <div class="banner-right">
+            <div class="banner-right" style="display: flex; align-items: center; gap: 1rem;">
+                <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" onclick="toggleDarkMode()">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
                 <div class="notification-wrapper" style="position: relative;">
                     <div class="notification-icon" id="notificationToggle" style="cursor:pointer;">
                         <i class="fa-regular fa-bell"></i>
@@ -1102,6 +1106,39 @@ if (isset($db['departments'])) {
 
         <!-- Dashboard View -->
         <div id="view-dashboard" class="app-view active">
+            <!-- Admin Portal Summary -->
+            <div class="stats-row" style="margin-bottom: 30px;">
+                <div class="stat-card stat-students">
+                    <div class="stat-icon" style="background: #eff6ff; color: #3b82f6;"><i class="fa-solid fa-user-graduate"></i></div>
+                    <div class="stat-info">
+                        <h4>Total Students</h4>
+                        <p><?php echo isset($db['students']) ? count($db['students']) : 0; ?></p>
+                    </div>
+                </div>
+                <div class="stat-card stat-faculty">
+                    <div class="stat-icon" style="background: #f0fdf4; color: #22c55e;"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <div class="stat-info">
+                        <h4>Total Faculties</h4>
+                        <p><?php echo isset($db['faculty']) ? count($db['faculty']) : 0; ?></p>
+                    </div>
+                </div>
+                <div class="stat-card stat-department">
+                    <div class="stat-icon" style="background: #fdf2f8; color: #ec4899;"><i class="fa-solid fa-building"></i></div>
+                    <div class="stat-info">
+                        <h4>Total Departments</h4>
+                        <p><?php echo isset($db['departments']) ? count($db['departments']) : 0; ?></p>
+                    </div>
+                </div>
+                <div class="stat-card stat-notice">
+                    <div class="stat-icon" style="background: #fffbeb; color: #f59e0b;"><i class="fa-solid fa-bullhorn"></i></div>
+                    <div class="stat-info">
+                        <h4>Total Notices</h4>
+                        <p><?php echo isset($db['notices']) ? count($db['notices']) : 0; ?></p>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="font-size: 1.15rem; color: #1e293b; margin-bottom: 20px; font-weight: 700;">Quick Access</h3>
             <div class="cards-grid">
                 <!-- User Management Card -->
                 <div class="dashboard-card card-purple">
@@ -1204,7 +1241,7 @@ if (isset($db['departments'])) {
             </div>
 
             <div class="section-header">
-                <h2>All Users (IT Department)</h2>
+                <h2>All Users</h2>
                 <button class="add-btn" onclick="openModal()"><i class="fa-solid fa-plus"></i> Add User</button>
             </div>
 
@@ -1213,6 +1250,7 @@ if (isset($db['departments'])) {
                     <thead>
                         <tr>
                             <th>User</th>
+                            <th>PRN / ID</th>
                             <th>Role</th>
                             <th>Department</th>
                             <th>Subjects</th>
@@ -1256,6 +1294,7 @@ if (isset($db['departments'])) {
                             
                             echo "<tr>";
                             echo "<td><div class='user-cell'><span class='user-name-link' onclick='showUserProfile(this)' data-user='{$user_data}'>".htmlspecialchars($f['name'])."</span></div></td>";
+                            echo "<td><span style='font-size:0.85rem; color:#64748b; font-weight:600;'>".htmlspecialchars($f['id'])."</span></td>";
                             echo "<td><span class='badge {$badgeClass}'>{$roleLabel}</span></td>";
                             echo "<td>".htmlspecialchars($department)."</td>";
                             echo "<td>".htmlspecialchars($subjects)."</td>";
@@ -1266,30 +1305,31 @@ if (isset($db['departments'])) {
                         }
                         
                         foreach ($db['students'] as $s) {
-                            if (strpos($s['dept'], 'IT') !== false || strpos($s['dept'], 'Information Technology') !== false) {
-                                $student_dept = explode(' - ', $s['dept'])[0];
-                                $student_dept = $get_shortform($student_dept);
-                                
-                                $user_data = htmlspecialchars(json_encode([
-                                    'name' => $s['name'],
-                                    'role' => 'Student',
-                                    'department' => $student_dept,
-                                    'subjects' => 'N/A',
-                                    'email' => $s['email'],
-                                    'phone' => $s['phone'],
-                                    'avatar' => isset($s['avatar']) && !empty($s['avatar']) ? $s['avatar'] : 'https://ui-avatars.com/api/?name='.urlencode($s['name']).'&background=random'
-                                ]), ENT_QUOTES, 'UTF-8');
-                                
-                                echo "<tr>";
-                                echo "<td><div class='user-cell'><span class='user-name-link' onclick='showUserProfile(this)' data-user='{$user_data}'>".htmlspecialchars($s['name'])."</span></div></td>";
-                                echo "<td><span class='badge badge-student'>Student</span></td>";
-                                echo "<td>".htmlspecialchars($student_dept)."</td>";
-                                echo "<td>-</td>";
-                                echo "<td>".htmlspecialchars($s['email'])."</td>";
-                                echo "<td>".htmlspecialchars($s['phone'])."</td>";
-                                echo "<td><span style='color: #22c55e; font-weight: 500;'><i class='fa-solid fa-circle' style='font-size: 8px; margin-right: 4px;'></i> Active</span></td>";
-                                echo "</tr>";
-                            }
+                            $student_dept = explode(' - ', $s['dept'] ?? 'Information Technology')[0];
+                            $student_dept = $get_shortform($student_dept);
+                            $display_prn = !empty($s['prn']) ? $s['prn'] : $s['id'];
+                            
+                            $user_data = htmlspecialchars(json_encode([
+                                'name' => $s['name'],
+                                'role' => 'Student',
+                                'prn' => $display_prn,
+                                'department' => $student_dept,
+                                'subjects' => 'N/A',
+                                'email' => $s['email'],
+                                'phone' => $s['phone'],
+                                'avatar' => isset($s['avatar']) && !empty($s['avatar']) ? $s['avatar'] : 'https://ui-avatars.com/api/?name='.urlencode($s['name']).'&background=random'
+                            ]), ENT_QUOTES, 'UTF-8');
+                            
+                            echo "<tr>";
+                            echo "<td><div class='user-cell'><span class='user-name-link' onclick='showUserProfile(this)' data-user='{$user_data}'>".htmlspecialchars($s['name'])."</span></div></td>";
+                            echo "<td><span style='font-size:0.9rem; color:#4f46e5; font-weight:700;'>".htmlspecialchars($display_prn)."</span></td>";
+                            echo "<td><span class='badge badge-student'>Student</span></td>";
+                            echo "<td>".htmlspecialchars($student_dept)."</td>";
+                            echo "<td>-</td>";
+                            echo "<td>".htmlspecialchars($s['email'])."</td>";
+                            echo "<td>".htmlspecialchars($s['phone'])."</td>";
+                            echo "<td><span style='color: #22c55e; font-weight: 500;'><i class='fa-solid fa-circle' style='font-size: 8px; margin-right: 4px;'></i> Active</span></td>";
+                            echo "</tr>";
                         }
                         ?>
                     </tbody>
@@ -1430,12 +1470,18 @@ if (isset($db['departments'])) {
                             <?php endif; ?>
                         </div>
                         <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 0.65rem;"><?= htmlspecialchars($n['desc']) ?></p>
-                        <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: #475569; font-weight: 500;">
+                        <div style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.85rem; color: #475569; font-weight: 500; flex-wrap: wrap;">
                             <span><i class="fa-regular fa-calendar" style="color: #64748b;"></i> Published: <?= htmlspecialchars($n['date']) ?></span>
                             <span><i class="fa-regular fa-clock" style="color: #64748b;"></i> Expiry: <?= htmlspecialchars($n['expiry'] ?: 'N/A') ?></span>
                             <?php if (!empty($n['attachment'])): ?>
                                 <a href="<?= htmlspecialchars($n['attachment']) ?>" target="_blank" style="color: #0284c7; text-decoration: none;"><i class="fa-solid fa-paperclip"></i> <?= htmlspecialchars($n['attachment']) ?></a>
                             <?php endif; ?>
+                            <form method="POST" action="delete.php" style="margin:0; margin-left:auto;">
+                                <input type="hidden" name="action" value="delete_item">
+                                <input type="hidden" name="type" value="notices">
+                                <input type="hidden" name="id" value="<?= $n['id'] ?>">
+                                <button type="submit" style="background:transparent;border:none;color:#ef4444;cursor:pointer;padding:0.2rem;" title="Delete Notice" onclick="return confirm('Delete this notice?');"><i class="fa-solid fa-trash"></i> Delete</button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -1855,13 +1901,27 @@ if (isset($db['departments'])) {
 
                 <div class="form-group">
                     <label>Department</label>
-                    <select name="department" required>
+                    <select name="department" id="deptSelect" onchange="updatePRN()" required>
                         <option value="Information Technology">Information Technology</option>
                         <option value="Computer Engineering">Computer Engineering</option>
                         <option value="Electronics & Telecommunication">Electronics & Telecommunication</option>
                         <option value="Mechanical Engineering">Mechanical Engineering</option>
                         <option value="Civil Engineering">Civil Engineering</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="prnGroup">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: #334155;">
+                        Automatic Student PRN
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 0.6rem; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;">
+                        <input type="checkbox" id="autoPrnToggle" checked onchange="toggleAutoPrnMode(this)" style="width: 18px; height: 18px; accent-color: #4f46e5; cursor: pointer;">
+                        <label for="autoPrnToggle" style="font-size: 0.85rem; font-weight: 600; color: #475569; cursor: pointer; margin: 0; user-select: none;">Auto-generate PRN by Department</label>
+                        <span style="margin-left: auto; font-size: 0.75rem; color: #4f46e5; font-weight: 700; background: #e0e7ff; padding: 2px 8px; border-radius: 12px;">Active</span>
+                    </div>
+                    <div>
+                        <input type="text" name="prn" id="prnInput" readonly value="<?= htmlspecialchars(generate_next_prn($db, 'Information Technology')) ?>" style="background-color: #e0e7ff; font-weight: 700; color: #3730a3; border: 1.5px solid #6366f1; cursor: not-allowed; font-size: 1rem; letter-spacing: 0.5px; width: 100%; padding: 0.65rem 0.75rem; border-radius: 8px;" placeholder="Auto-generated PRN">
+                    </div>
                 </div>
 
                 <!-- Faculty specific fields -->
@@ -1976,6 +2036,13 @@ if (isset($db['departments'])) {
                         <p id="pm-department">IT</p>
                     </div>
                 </div>
+                <div class="pm-info-row pm-prn-row">
+                    <div class="pm-info-icon"><i class="fa-solid fa-id-card"></i></div>
+                    <div class="pm-info-text">
+                        <label>PRN</label>
+                        <p id="pm-prn">N/A</p>
+                    </div>
+                </div>
                 <div class="pm-info-row pm-subjects-row">
                     <div class="pm-info-icon"><i class="fa-solid fa-book"></i></div>
                     <div class="pm-info-text">
@@ -2027,9 +2094,96 @@ if (isset($db['departments'])) {
             }
         }
 
+        window.existingStudents = <?php echo json_encode($db['students'] ?? []); ?>;
+
+        function getDeptPrefix(deptName) {
+            if (!deptName) return 'ST';
+            const clean = deptName.replace(/^Department of\s+/i, '').split(' - ')[0].trim();
+            const map = {
+                'Information Technology': 'IT',
+                'Computer Engineering': 'CE',
+                'Computer Science': 'CS',
+                'Computer Science & Engineering': 'CSE',
+                'Electronics & Telecommunication': 'ENTC',
+                'Electronics Engineering': 'EXTC',
+                'Mechanical Engineering': 'ME',
+                'Civil Engineering': 'CV',
+                'Electrical Engineering': 'EE',
+                'Chemical Engineering': 'CHE',
+                'AI & Data Science': 'AIDS',
+                'Artificial Intelligence': 'AI'
+            };
+            if (map[clean]) return map[clean];
+            const words = clean.replace(/[^a-zA-Z\s]/g, '').split(/\s+/);
+            let initials = '';
+            words.forEach(w => {
+                if (w && !['of', 'and', '&'].includes(w.toLowerCase())) {
+                    initials += w[0].toUpperCase();
+                }
+            });
+            return initials || 'ST';
+        }
+
+        function toggleAutoPrnMode(checkbox) {
+            const prnInput = document.getElementById('prnInput');
+            if (!prnInput) return;
+            if (checkbox.checked) {
+                prnInput.readOnly = true;
+                prnInput.style.backgroundColor = '#e0e7ff';
+                prnInput.style.color = '#3730a3';
+                prnInput.style.border = '1.5px solid #6366f1';
+                prnInput.style.cursor = 'not-allowed';
+                updatePRN();
+            } else {
+                prnInput.readOnly = false;
+                prnInput.style.backgroundColor = '#ffffff';
+                prnInput.style.color = '#0f172a';
+                prnInput.style.border = '1.5px solid #cbd5e1';
+                prnInput.style.cursor = 'text';
+                prnInput.focus();
+            }
+        }
+
+        function updatePRN() {
+            const roleSelect = document.getElementById('roleSelect');
+            if (!roleSelect) return;
+            const role = roleSelect.value;
+            const deptSelect = document.querySelector('#addUserModal select[name="department"]');
+            const prnInput = document.getElementById('prnInput');
+            const prnGroup = document.getElementById('prnGroup');
+            const autoPrnToggle = document.getElementById('autoPrnToggle');
+
+            if (role === 'student') {
+                if (prnGroup) prnGroup.style.display = 'block';
+                if (autoPrnToggle && !autoPrnToggle.checked) {
+                    return;
+                }
+                const dept = deptSelect ? deptSelect.value : 'Information Technology';
+                const prefix = getDeptPrefix(dept);
+                
+                let count = 0;
+                if (window.existingStudents && Array.isArray(window.existingStudents)) {
+                    window.existingStudents.forEach(s => {
+                        const sPrefix = getDeptPrefix(s.dept || s.department || '');
+                        if (sPrefix === prefix || (s.prn && s.prn.startsWith(prefix))) {
+                            count++;
+                        }
+                    });
+                }
+                
+                const nextNum = count + 1;
+                const paddedNum = String(nextNum).padStart(4, '0');
+                if (prnInput) prnInput.value = prefix + paddedNum;
+            } else {
+                if (prnGroup) prnGroup.style.display = 'none';
+            }
+        }
+
         // Modal functions
         function openModal() {
             document.getElementById('addUserModal').classList.add('active');
+            handleRoleChange();
+            updatePRN();
         }
 
         function closeModal() {
@@ -2045,6 +2199,7 @@ if (isset($db['departments'])) {
             } else {
                 facultyFields.style.display = 'none';
             }
+            updatePRN();
         }
 
         // Close modal when clicking outside
@@ -2106,11 +2261,19 @@ if (isset($db['departments'])) {
             document.getElementById('pm-phone').textContent = userData.phone;
             document.getElementById('pm-department').textContent = userData.department;
             
+            const prnRow = document.querySelector('.pm-prn-row');
             if(userData.role === 'Student') {
                 document.querySelector('.pm-subjects-row').style.display = 'none';
+                if(prnRow) {
+                    prnRow.style.display = 'flex';
+                    document.getElementById('pm-prn').textContent = userData.prn || 'N/A';
+                }
             } else {
                 document.querySelector('.pm-subjects-row').style.display = 'flex';
                 document.getElementById('pm-subjects').textContent = userData.subjects;
+                if(prnRow) {
+                    prnRow.style.display = 'none';
+                }
             }
             
             const modal = document.getElementById('profileModal');
@@ -2131,6 +2294,54 @@ if (isset($db['departments'])) {
         <?php if($success_message): ?>
             switchTab('<?php echo isset($active_tab) ? $active_tab : 'user-management'; ?>');
         <?php endif; ?>
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('form[action="delete.php"]').forEach(form => {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    try {
+                        let formData = new FormData(this);
+                        let response = await fetch('delete.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('Failed to delete item.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('An error occurred while deleting.');
+                    }
+                });
+            });
+        });
+
+        // Dark mode toggle handler
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme_preference', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const btns = document.querySelectorAll('.theme-toggle-btn');
+            btns.forEach(btn => {
+                btn.innerHTML = isDark 
+                    ? '<i class="fa-solid fa-sun" style="color: #f59e0b;"></i>' 
+                    : '<i class="fa-solid fa-moon"></i>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePRN();
+            if (localStorage.getItem('theme_preference') === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeIcon(true);
+            }
+        });
     </script>
 </body>
 </html>

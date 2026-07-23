@@ -8,6 +8,15 @@ if (basename($_SERVER['PHP_SELF']) == 'db.php') {
 
 define('DB_FILE', __DIR__ . '/database.json');
 
+function get_initials_avatar($name, $size = 40, $font_size = 16, $border = 2) {
+    $name = str_replace(['Prof. ', 'Dr. ', 'Mr. ', 'Ms. '], '', trim($name));
+    $parts = explode(" ", $name);
+    $first_initial = substr($parts[0], 0, 1);
+    $last_initial = count($parts) > 1 ? substr(end($parts), 0, 1) : '';
+    $initials = strtoupper($first_initial . $last_initial);
+    return "<div style=\"width: {$size}px; height: {$size}px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; border: {$border}px solid #e0e7ff; font-size: {$font_size}px; flex-shrink: 0;\">{$initials}</div>";
+}
+
 function init_db() {
     if (!file_exists(DB_FILE)) {
         $default_data = [
@@ -160,6 +169,7 @@ function init_db() {
             'students' => [
                 [
                     'id' => '125UIT1080',
+                    'prn' => 'IT0001',
                     'username' => '125UIT1080',
                     'name' => 'Prasad Kulkarni',
                     'email' => 'prasad.kulkarni@erp.edu',
@@ -172,6 +182,7 @@ function init_db() {
                 ],
                 [
                     'id' => '125UIT1081',
+                    'prn' => 'IT0002',
                     'username' => 'sneha81',
                     'name' => 'Sneha Deshmukh',
                     'email' => 'sneha.deshmukh@erp.edu',
@@ -184,6 +195,7 @@ function init_db() {
                 ],
                 [
                     'id' => '125UIT1082',
+                    'prn' => 'IT0003',
                     'username' => 'rahul82',
                     'name' => 'Rahul Sharma',
                     'email' => 'rahul.sharma@erp.edu',
@@ -574,5 +586,54 @@ function get_db() {
 
 function save_db($data) {
     file_put_contents(DB_FILE, json_encode($data, JSON_PRETTY_PRINT));
+}
+
+function generate_next_prn(&$db, $department) {
+    $clean_dept = preg_replace('/^Department of\s+/i', '', trim($department));
+    $clean_dept = explode(' - ', $clean_dept)[0];
+    $clean_dept = trim($clean_dept);
+    
+    $prefix_map = [
+        'Information Technology' => 'IT',
+        'Computer Engineering' => 'CE',
+        'Computer Science' => 'CS',
+        'Computer Science & Engineering' => 'CSE',
+        'Electronics & Telecommunication' => 'ENTC',
+        'Electronics & Telecommunication Engineering' => 'ENTC',
+        'Electronics Engineering' => 'EXTC',
+        'Mechanical Engineering' => 'ME',
+        'Civil Engineering' => 'CV',
+        'Electrical Engineering' => 'EE',
+        'Chemical Engineering' => 'CHE',
+        'AI & Data Science' => 'AIDS',
+        'Artificial Intelligence' => 'AI'
+    ];
+    
+    $prefix = $prefix_map[$clean_dept] ?? '';
+    if (!$prefix) {
+        $words = explode(' ', preg_replace('/[^a-zA-Z\s]/', '', $clean_dept));
+        $initials = '';
+        foreach ($words as $w) {
+            if (!empty($w) && !in_array(strtolower($w), ['of', 'and', '&'])) {
+                $initials .= strtoupper($w[0]);
+            }
+        }
+        $prefix = !empty($initials) ? $initials : 'ST';
+    }
+    
+    $count = 0;
+    if (isset($db['students'])) {
+        foreach ($db['students'] as $s) {
+            $s_dept = preg_replace('/^Department of\s+/i', '', trim($s['dept'] ?? ''));
+            $s_dept = explode(' - ', $s_dept)[0];
+            $s_dept = trim($s_dept);
+            
+            if ($s_dept === $clean_dept || (isset($s['prn']) && strpos($s['prn'], $prefix) === 0)) {
+                $count++;
+            }
+        }
+    }
+    
+    return $prefix . sprintf('%04d', $count + 1);
 }
 ?>
